@@ -1,0 +1,27 @@
+# Fichiers sensibles
+.env
+backend-parry-symfony/.env
+uptrace/config.yml
+
+# Données Docker
+db-data/
+uptrace-data/
+
+# Symfony
+backend-parry-symfony/.env.local
+backend-parry-symfony/.env.*.local
+backend-parry-symfony/var/
+backend-parry-symfony/vendor/
+backend-parry-symfony/composer.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# .env 
+.env.local
+.env.*.local
+.env
+.env.example
+.env.*

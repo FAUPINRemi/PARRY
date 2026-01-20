@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+    container_name: parry-php
+    restart: unless-stopped
+    working_dir: /var/www/symfony
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV}
+      DATABASE_URL: ${DATABASE_URL}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME}
+      OTEL_EXPORTER_OTLP_ENDPOINT: https://api.uptrace.dev
+      OTEL_EXPORTER_OTLP_HEADERS: uptrace-dsn=https://gPxhkamXQ@jL-9fjw8uBg@api.uptrace.dev?grpc=4317
+      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend-parry-symfony:/var/www/symfony:cached
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    container_name: parry-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer:latest
+    container_name: parry-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - "${ADMINER_PORT}:8080"
+    depends_on:
+      - db
+
+volumes:
+  db-data:
