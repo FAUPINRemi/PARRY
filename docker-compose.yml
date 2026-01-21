@@ -13,10 +13,10 @@ services:
     environment:
       APP_ENV: ${APP_ENV}
       DATABASE_URL: ${DATABASE_URL}
-      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME}
-      OTEL_EXPORTER_OTLP_ENDPOINT: https://api.uptrace.dev
+      OTEL_SERVICE_NAME: backend-parry
+      OTEL_EXPORTER_OTLP_ENDPOINT: https://otlp.uptrace.dev
       OTEL_EXPORTER_OTLP_HEADERS: uptrace-dsn=https://gPxhkamXQ@jL-9fjw8uBg@api.uptrace.dev?grpc=4317
-      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES}
+      OTEL_RESOURCE_ATTRIBUTES: service.name=backend-parry,service.version=1.0.0
     ports:
       - "8000:8000"
     volumes:
