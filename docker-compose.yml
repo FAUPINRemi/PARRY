@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   php:
     build:
@@ -14,13 +12,16 @@ services:
       APP_ENV: ${APP_ENV}
       DATABASE_URL: ${DATABASE_URL}
       OTEL_SERVICE_NAME: backend-parry
-      OTEL_EXPORTER_OTLP_ENDPOINT: https://otlp.uptrace.dev
-      OTEL_EXPORTER_OTLP_HEADERS: uptrace-dsn=https://gPxhkamXQ@jL-9fjw8uBg@api.uptrace.dev?grpc=4317
-      OTEL_RESOURCE_ATTRIBUTES: service.name=backend-parry,service.version=1.0.0
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS}
+      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES}
     ports:
       - "8000:8000"
     volumes:
       - ./backend-parry-symfony:/var/www/symfony:cached
+      - /var/www/symfony/vendor
+      - /var/www/symfony/var/cache
+      - /var/www/symfony/var/log
     depends_on:
       - db
 

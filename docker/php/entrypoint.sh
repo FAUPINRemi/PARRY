@@ -1,15 +1,19 @@
 #!/bin/sh
 set -e
 
+# Installer/mettre à jour les dépendances automatiquement
+echo "Vérification des dépendances Composer..."
+composer install --no-interaction
+
 # Attendre que la base de données soit prête
-echo "Waiting for database..."
+echo "Chargement bdd"
 until pg_isready -h db -p 5432 -U parry; do
-  echo "Database is unavailable - sleeping"
+  echo "BDD indisponible"
   sleep 1
 done
-echo "Database is ready!"
+echo "Base de donnée ok "
 
-# Lancer les migrations Doctrine (optionnel)
+# Lancer les migrations Doctrine
 php bin/console doctrine:migrations:migrate --no-interaction || true
 
 # Démarrer le serveur de développement Symfony sur le port 8000

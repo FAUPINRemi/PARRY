@@ -18,45 +18,38 @@ class OpenTelemetryService
 
     public static function init(): void
     {
-        // Endpoint corrigé
-        $endpoint = 'https://api.uptrace.dev/v1/traces';
+        $endpoint = $_ENV['OTEL_EXPORTER_OTLP_ENDPOINT'];
         $headers = [
-            'uptrace-dsn' => 'https://gPxh4wOmNX8jt-9fjWRBug@api.uptrace.dev?grpc=4317'
+            'uptrace-dsn' => $_ENV['UPTRACE_DSN']
         ];
 
-        // Créer les resource attributes
         $resource = ResourceInfoFactory::emptyResource()->merge(
             ResourceInfo::create(Attributes::create([
-                'service.name' => 'backend-parry',
-                'service.version' => '1.0.0',
-                'deployment.environment' => 'dev',
+                'service.name' => $_ENV['OTEL_SERVICE_NAME'] ?? 'backend-parry',
+                'service.version' => $_ENV['OTEL_SERVICE_VERSION'] ?? '1.0.0',
+                'deployment.environment' => $_ENV['APP_ENV'] ?? 'dev',
             ]))
         );
 
-        // Créer le transport HTTP
         $transport = (new OtlpHttpTransportFactory())->create(
             $endpoint,
             ContentTypes::PROTOBUF,
             $headers
         );
 
-        // Créer l'exporter
         $exporter = new SpanExporter($transport);
-
         $spanProcessor = new SimpleSpanProcessor($exporter);
 
-        // Créer le tracer provider
         self::$tracerProvider = new TracerProvider(
             $spanProcessor,
             null,
             $resource
         );
 
-        // Enregistrer globalement via Sdk::builder
         Sdk::builder()
             ->setTracerProvider(self::$tracerProvider)
             ->buildAndRegisterGlobal();
 
-        echo "OpenTelemetry initialized successfully\n";
+        echo "OpenTelemetry ok\n";
     }
 }

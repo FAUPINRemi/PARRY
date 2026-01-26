@@ -18,9 +18,7 @@ class TelemetryService
         $this->logger = $logger;
     }
 
-    /**
-     * Démarre un nouveau span (trace)
-     */
+  
     public function startSpan(string $name, array $attributes = [], string $kind = SpanKind::KIND_INTERNAL): SpanInterface
     {
         $tracer = Globals::tracerProvider()->getTracer('app');
@@ -43,9 +41,7 @@ class TelemetryService
         return $span;
     }
 
-    /**
-     * Termine un span
-     */
+  
     public function endSpan(string $name): void
     {
         if (isset($this->activeSpans[$name])) {
@@ -55,9 +51,7 @@ class TelemetryService
         }
     }
 
-    /**
-     * Ajoute un event sur le span actif
-     */
+  
     public function addEvent(string $spanName, string $eventName, array $attributes = []): void
     {
         if (isset($this->activeSpans[$spanName])) {
@@ -66,9 +60,7 @@ class TelemetryService
         }
     }
 
-    /**
-     * Enregistre une erreur sur un span
-     */
+
     public function recordError(string $spanName, \Throwable $exception): void
     {
         if (isset($this->activeSpans[$spanName])) {
@@ -84,9 +76,7 @@ class TelemetryService
         }
     }
 
-    /**
-     * Wrapper pour exécuter du code dans un span automatiquement
-     */
+ 
     public function trace(string $name, callable $callback, array $attributes = [])
     {
         $span = $this->startSpan($name, $attributes);
@@ -102,9 +92,7 @@ class TelemetryService
         }
     }
 
-    /**
-     * Log une requête API (entrante ou sortante)
-     */
+   
     public function logApiCall(string $method, string $endpoint, int $statusCode, float $duration, array $metadata = []): void
     {
         $span = $this->startSpan("API {$method} {$endpoint}", [
@@ -127,9 +115,7 @@ class TelemetryService
         $span->end();
     }
 
-    /**
-     * Log une requête externe (vers une API tierce)
-     */
+  
     public function logExternalApiCall(string $method, string $url, int $statusCode, float $duration): void
     {
         $span = $this->startSpan("External API {$method}", [
@@ -147,17 +133,13 @@ class TelemetryService
         $span->end();
     }
 
-    /**
-     * Log simple avec corrélation automatique
-     */
+    
     public function log(string $level, string $message, array $context = []): void
     {
         $this->logger->log($level, $message, $context);
     }
 
-    /**
-     * Récupère l'URL de trace Uptrace pour debug
-     */
+   
     public function getTraceUrl(?string $spanName = null): ?string
     {
         $span = $spanName && isset($this->activeSpans[$spanName]) 
