@@ -9,7 +9,7 @@ composer install --no-interaction
 echo "Chargement bdd"
 until pg_isready -h db -p 5432 -U parry; do
   echo "BDD indisponible"
-  sleep 1
+  sleep 1 
 done
 echo "Base de donnée ok "
 
