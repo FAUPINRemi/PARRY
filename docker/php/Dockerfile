@@ -11,12 +11,11 @@ COPY docker/php/php.ini /usr/local/etc/php/php.ini
 
 WORKDIR /var/www/symfony
 
-# On définit la variable d'environnement pour Composer
-ENV COMPOSER_ALLOW_SUPERUSER=1
-ENV COMPOSER_MEMORY_LIMIT=-1
-
+# Installation des dépendances Composer
 COPY backend-parry-symfony/composer.* ./
-RUN php -d memory_limit=-1 /usr/bin/composer install --no-scripts --no-interaction --optimize-autoloader
+ENV COMPOSER_ALLOW_SUPERUSER=1
+RUN composer update --no-scripts
+RUN composer install --no-scripts
 
 # Copie du code de l'application
 COPY backend-parry-symfony/ ./
