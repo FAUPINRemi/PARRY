@@ -13,8 +13,6 @@
         "doctrine/orm": "^3.6",
         "guzzlehttp/guzzle": "*",
         "nyholm/psr7": "*",
-        "open-telemetry/exporter-otlp": "*",
-        "open-telemetry/sdk": "*",
         "php-http/guzzle7-adapter": "^1.0",
         "phpdocumentor/reflection-docblock": "^5.2",
         "phpstan/phpdoc-parser": "^2.3",

@@ -1,11 +1,9 @@
 # Fichiers sensibles
 .env
 backend-parry-symfony/.env
-uptrace/config.yml
 
 # Données Docker
 db-data/
-uptrace-data/
 
 # Symfony
 backend-parry-symfony/.env.local
