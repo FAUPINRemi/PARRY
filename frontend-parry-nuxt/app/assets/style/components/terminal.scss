@@ -1,0 +1,22 @@
+@use "./../util/colors";
+@use "./../util/spacing";
+@use "./../util/font-sizes";
+
+.terminal {
+  display: flex;
+
+  .panel {
+    &--content {
+      display: flex;
+      flex-direction: column;
+
+      overflow-x: hidden;
+      overflow-y: auto;
+
+      justify-content: end;
+
+      max-height: 100%;
+      width: 100%;
+    }
+  }
+}

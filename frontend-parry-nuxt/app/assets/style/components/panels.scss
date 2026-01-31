@@ -2,10 +2,10 @@
 @use "./../util/spacing";
 @use "./../util/font-sizes";
 
-.gSection {
+.panel {
   position: relative;
 
-  flex: 1;
+  width: 100%;
 
   margin: spacing.$s5;
   padding: spacing.$s5;
@@ -19,7 +19,7 @@
     left: spacing.$s6;
     transform: translateY(-50%);
 
-    padding: spacing.$s1 spacing.$s3;
+    padding: 0 spacing.$s3;
 
     background-color: colors.$bg-main;
 
@@ -29,5 +29,6 @@
   }
 
   &--content {
+    min-height: 100%;
   }
 }
