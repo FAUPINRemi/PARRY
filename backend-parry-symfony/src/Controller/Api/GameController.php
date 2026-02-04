@@ -94,10 +94,10 @@ class GameController extends AbstractController
         }
         
         try {
-            $voteResult = $this->aiOrchestrator->analyzeAndVote($players, $question);
+            $voteResult = $this->aiOrchestrator->voteAsHuman($players, $question);
             
-            return $this->json($voteResult);
-            
+            return $this->json(['voted_for' => $voteResult]);
+          
         } catch (\Exception $e) {
             return $this->json(['error' => $e->getMessage()], 500);
         }
