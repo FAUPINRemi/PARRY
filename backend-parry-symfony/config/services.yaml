@@ -22,3 +22,7 @@ services:
             $apiUrl: '%env(GEMINI_API_URL)%'
             $apiKey: '%env(GEMINI_API_KEY)%'
             $model: '%env(GEMINI_MODEL)%'
+    
+    App\Service\GameRedisService:
+        arguments:
+            $redisUrl: '%env(REDIS_URL)%'
