@@ -14,8 +14,7 @@ WORKDIR /var/www/symfony
 # Installation des dépendances Composer
 COPY backend-parry-symfony/composer.* ./
 ENV COMPOSER_ALLOW_SUPERUSER=1
-RUN composer update --no-scripts
-RUN composer install --no-scripts
+RUN composer update --no-scripts && composer install --no-scripts
 
 # Copie du code de l'application
 COPY backend-parry-symfony/ ./
@@ -23,8 +22,7 @@ RUN composer run-script post-install-cmd || true
 
 # Entrypoint
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh &&  chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 8000
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
