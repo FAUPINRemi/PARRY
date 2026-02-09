@@ -6,9 +6,7 @@ nelmio_api_doc:
             version: 1.0.0
         servers:
             - url: http://192.168.0.26:8000
-              description: Environnement de développement
-            - url: http://192.168.0.26:8001
-              description: Environnement de production (Docker)
+              description: Développement
         components:
             securitySchemes:
                 Bearer:
@@ -17,8 +15,8 @@ nelmio_api_doc:
                     bearerFormat: JWT
         security:
             - Bearer: []
+    
     areas:
-        path_patterns:
-            - ^/api(?!/doc$)
-        host_patterns:
-            - ^.*$
+        default:
+            path_patterns:
+                - ^/api(?!/doc$)
