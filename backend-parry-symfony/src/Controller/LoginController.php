@@ -8,9 +8,9 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class LoginController extends AbstractController
 {
-    #[Route('/api/auth/login', name: 'api_login', methods: ['POST'])]
+    #[Route('/api/login', name: 'api_login', methods: ['POST'])]
     #[OA\Post(
-        path: '/api/auth/login',
+        path: '/api/login',
         summary: 'Se connecter',
         tags: ['Authentication']
     )]
