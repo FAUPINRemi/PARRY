@@ -1,51 +1,108 @@
 <?php
+
 namespace App\Entity;
 
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
+use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Uid\Uuid;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'users')]
-class User
+#[UniqueEntity(fields: ['email'], message: 'Cet email est déjà utilisé.')]
+#[UniqueEntity(fields: ['pseudo'], message: 'Ce pseudo est déjà utilisé.')]
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
-    private ?Uuid $id = null;
+    private Uuid $id;
 
-    #[ORM\Column(type: 'string', length: 255, unique: true)]
+    #[ORM\Column(type: 'string', length: 180, unique: true)]
+    #[Assert\NotBlank(message: 'L\'email est obligatoire.')]
+    #[Assert\Email(message: 'L\'email  value  n\'est pas valide.')]
     private ?string $email = null;
 
-    #[ORM\Column(type: 'string', length: 255)]
-    private ?string $password = null;
-
     #[ORM\Column(type: 'string', length: 50, unique: true)]
-    private ?string $username = null;
+    #[Assert\NotBlank(message: 'Le pseudo est obligatoire.')]
+    #[Assert\Length(
+        min: 3,
+        max: 50,
+        minMessage: 'Le pseudo doit contenir au moins  limit  caractères.',
+        maxMessage: 'Le pseudo ne peut pas dépasser  limit  caractères.'
+    )]
+    private ?string $pseudo = null;
 
-    #[ORM\Column(type: 'boolean', options: ['default' => false])]
-    private bool $isPremium = false;
+    #[ORM\Column(type: 'json')]
+    private array $roles = [];
 
-    #[ORM\Column(type: 'datetime')]
-    private ?\DateTimeInterface $createdAt = null;
-
-    #[ORM\ManyToMany(targetEntity: Game::class, mappedBy: 'players')]
-    private Collection $games;
-
-    #[ORM\OneToMany(targetEntity: Answer::class, mappedBy: 'author')]
-    private Collection $answers;
-
-    #[ORM\OneToMany(targetEntity: Vote::class, mappedBy: 'voter')]
-    private Collection $votes;
+    #[ORM\Column(type: 'string')]
+    private ?string $password = null;
 
     public function __construct()
     {
         $this->id = Uuid::v4();
-        $this->createdAt = new \DateTime();
-        $this->games = new ArrayCollection();
-        $this->answers = new ArrayCollection();
-        $this->votes = new ArrayCollection();
     }
 
-    // Getters et setters...
+    public function getId(): Uuid
+    {
+        return $this->id;
+    }
+
+    public function getEmail(): ?string
+    {
+        return $this->email;
+    }
+
+    public function setEmail(string $email): self
+    {
+        $this->email = $email;
+        return $this;
+    }
+
+    public function getPseudo(): ?string
+    {
+        return $this->pseudo;
+    }
+
+    public function setPseudo(string $pseudo): self
+    {
+        $this->pseudo = $pseudo;
+        return $this;
+    }
+
+    public function getUserIdentifier(): string
+    {
+        return (string) $this->email;
+    }
+
+    public function getRoles(): array
+    {
+        $roles = $this->roles;
+        $roles[] = 'ROLE_USER';
+        return array_unique($roles);
+    }
+
+    public function setRoles(array $roles): self
+    {
+        $this->roles = $roles;
+        return $this;
+    }
+
+    public function getPassword(): string
+    {
+        return $this->password;
+    }
+
+    public function setPassword(string $password): self
+    {
+        $this->password = $password;
+        return $this;
+    }
+
+    public function eraseCredentials(): void
+    {
+    }
 }

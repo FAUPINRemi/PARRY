@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use Doctrine\DBAL\Connection;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -14,6 +15,29 @@ class DatabaseTestController extends AbstractController
     ) {}
 
     #[Route('/api/test-db', name: 'api_test_db', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/test-db',
+        summary: 'Tester la connexion à la base de données',
+        tags: ['Tools']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Statistiques de la base de données',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'version', type: 'string'),
+                new OA\Property(property: 'tables_count', type: 'integer'),
+                new OA\Property(
+                    property: 'stats',
+                    properties: [
+                        new OA\Property(property: 'tables_count', type: 'integer'),
+                        new OA\Property(property: 'db_size', type: 'integer')
+                    ],
+                    type: 'object'
+                )
+            ]
+        )
+    )]
     public function testDatabase(): Response
     {
         // Query 1 - version PostgreSQL
