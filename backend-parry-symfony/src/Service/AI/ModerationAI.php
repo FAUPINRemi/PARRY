@@ -4,8 +4,9 @@ namespace App\Service\AI;
 
 class ModerationAI
 {
-    private const TEMPERATURE = 0.2; 
+    private const TEMPERATURE = 0.2;
     private const MAX_TOKENS = 200;
+    private array $cache = []; 
     
     public function __construct(
         private readonly GeminiClient $geminiClient
@@ -16,6 +17,12 @@ class ModerationAI
      */
     public function moderateContent(string $content, string $contentType = 'response'): array
     {
+        $cacheKey = md5($content . $contentType);
+        
+        if (isset($this->cache[$cacheKey])) {
+            return $this->cache[$cacheKey];
+        }
+        
         $prompt = $this->buildPrompt($content, $contentType);
         
         $responseText = $this->geminiClient->generate(
@@ -24,7 +31,11 @@ class ModerationAI
             self::MAX_TOKENS
         );
         
-        return $this->parseModerationResponse($responseText);
+        $result = $this->parseModerationResponse($responseText);
+        
+        $this->cache[$cacheKey] = $result;
+        
+        return $result;
     }
     
     private function buildPrompt(string $content, string $contentType): string
@@ -82,7 +93,6 @@ PROMPT;
             $data = json_decode($cleaned, true, 512, JSON_THROW_ON_ERROR);
             return $data;
         } catch (\JsonException $e) {
-            // En cas d'erreur de parsing, bloquer par sécurité
             return [
                 'is_safe' => false,
                 'flagged_reasons' => ['parsing_error'],
