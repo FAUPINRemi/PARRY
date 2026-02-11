@@ -11,7 +11,8 @@ class GeminiClient
         private readonly HttpClientInterface $httpClient,
         private readonly string $apiUrl,
         private readonly string $apiKey,
-        private readonly string $model
+        private readonly string $model,
+        private readonly ?BudgetGuard $budgetGuard = null 
     ) {}
 
     /**
@@ -27,6 +28,10 @@ class GeminiClient
         float $temperature = 0.7,
         int $maxTokens = 1024
     ): string {
+        if ($this->budgetGuard && !$this->budgetGuard->canMakeRequest()) {
+            throw new \RuntimeException('Budget mensuel de 5€ atteint. Les appels Gemini sont bloqués jusqu\'au mois prochain.');
+        }
+
         try {
             $response = $this->httpClient->request('POST', 
                 $this->apiUrl . $this->model . ':generateContent?key=' . $this->apiKey,
@@ -52,10 +57,33 @@ class GeminiClient
             
             $data = $response->toArray();
             
-            return $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            $result = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            
+            if ($this->budgetGuard) {
+                $estimatedCost = $this->estimateCost($prompt, $result);
+                $this->budgetGuard->trackRequest($estimatedCost);
+            }
+            
+            return $result;
             
         } catch (TransportExceptionInterface $e) {
             throw new \RuntimeException('Erreur lors de l\'appel à Gemini API: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Estime le coût d'une requête Gemini
+     * Gemini 2.0 Flash : ~0.09€ / 1M tokens input, ~0.36€ / 1M tokens output
+     */
+    private function estimateCost(string $prompt, string $response): float
+    {
+        $inputTokens = strlen($prompt) / 4;
+        $outputTokens = strlen($response) / 4;
+        
+        // Prix Gemini 2.5 Flash-light
+        $inputCost = ($inputTokens / 1_000_000) * 0.09;   
+        $outputCost = ($outputTokens / 1_000_000) * 0.36;  
+        
+        return $inputCost + $outputCost;
     }
 }

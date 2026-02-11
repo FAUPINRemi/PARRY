@@ -15,14 +15,32 @@ services:
     App\Controller\:
         resource: '../src/Controller/'
         tags: ['controller.service_arguments']
-        
-        
+    
+    # Budget Guard
+    App\Service\AI\BudgetGuard:
+        public: true
+    
+    # Gemini Client
     App\Service\AI\GeminiClient:
         arguments:
             $apiUrl: '%env(GEMINI_API_URL)%'
             $apiKey: '%env(GEMINI_API_KEY)%'
             $model: '%env(GEMINI_MODEL)%'
+            $budgetGuard: '@App\Service\AI\BudgetGuard'
     
+    # Game Redis Service
     App\Service\GameRedisService:
         arguments:
             $redisUrl: '%env(REDIS_URL)%'
+    
+    # Rate Limiter Service
+    App\Service\Security\RateLimiter:
+        public: true
+    
+    # Rate Limit Subscriber
+    App\EventSubscriber\RateLimitSubscriber:
+        arguments:
+            $rateLimiter: '@App\Service\Security\RateLimiter'
+            $logger: '@logger'
+        tags:
+            - { name: kernel.event_subscriber }
