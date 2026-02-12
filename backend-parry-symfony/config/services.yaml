@@ -1,5 +1,3 @@
-parameters:
-
 services:
     _defaults:
         autowire: true
@@ -12,32 +10,36 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
-    App\Controller\:
-        resource: '../src/Controller/'
-        tags: ['controller.service_arguments']
+    # --- CONFIGURATION AI SÉCURISÉE ---
     
-    # Budget Guard
-    App\Service\AI\BudgetGuard:
-        public: true
-    
-    # Gemini Client
+    # Le client de base : Lazy pour ne pas lire la clé au démarrage
     App\Service\AI\GeminiClient:
+        lazy: true
         arguments:
             $apiUrl: '%env(GEMINI_API_URL)%'
             $apiKey: '%env(GEMINI_API_KEY)%'
             $model: '%env(GEMINI_MODEL)%'
             $budgetGuard: '@App\Service\AI\BudgetGuard'
-    
-    # Game Redis Service
+            $logger: '@logger'
+
+    # On passe TOUS les services liés à l'IA en Lazy
+    # Symfony ne créera ces objets que si la méthode playAI est appelée
+    App\Service\AI\AIOrchestrator: { lazy: true }
+    App\Service\AI\QuestionGeneratorAI: { lazy: true }
+    App\Service\AI\ResponseGeneratorAI: { lazy: true }
+    App\Service\AI\VoteAnalyzerAI: { lazy: true }
+    App\Service\AI\MonitoringAI: { lazy: true }
+    App\Service\AI\ModerationAI: { lazy: true }
+    App\Service\AI\AIJoueurService: { lazy: true }
+
+    # --- AUTRES SERVICES ---
+    App\Service\AI\BudgetGuard:
+        public: true
+
     App\Service\GameRedisService:
         arguments:
             $redisUrl: '%env(REDIS_URL)%'
-    
-    # Rate Limiter Service
-    App\Service\Security\RateLimiter:
-        public: true
-    
-    # Rate Limit Subscriber
+
     App\EventSubscriber\RateLimitSubscriber:
         arguments:
             $rateLimiter: '@App\Service\Security\RateLimiter'
