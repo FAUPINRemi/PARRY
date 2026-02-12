@@ -27,7 +27,9 @@
     label="Profil"
     icon="pixelarticons:user"
     class="profil">
-    <button @click="closePanel" class="gButton transparent profilClose">
+    <button
+      @click="closePanel"
+      class="gButton profilClose transparentBackground iconOnly">
       <Icon name="pixelarticons:close-box" />
       Close
     </button>

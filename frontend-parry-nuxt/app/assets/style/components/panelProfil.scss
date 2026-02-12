@@ -28,5 +28,12 @@
 
     top: spacing.$s0;
     right: spacing.$s0;
+
+    font-size: 0px;
+    gap: spacing.$s0;
+
+    span {
+      font-size: font-sizes.$f1;
+    }
   }
 }

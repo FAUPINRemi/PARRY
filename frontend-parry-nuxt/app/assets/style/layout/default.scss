@@ -77,11 +77,22 @@
       background-color: colors.$shade-020;
     }
 
-    &.transparent {
+    &.transparentBackground {
       background-color: transparent;
 
       &:hover {
         background-color: colors.$shade-020;
+      }
+    }
+
+    &.iconOnly {
+      padding: spacing.$s2;
+      gap: spacing.$s0;
+
+      font-size: 0px;
+
+      span {
+        font-size: font-sizes.$f1;
       }
     }
   }
