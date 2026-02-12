@@ -16,11 +16,11 @@ services:
         resource: '../src/Controller/'
         tags: ['controller.service_arguments']
     
-    # Budget Guard
+    # Budget Guard - Gère la limite de dépenses locale
     App\Service\AI\BudgetGuard:
         public: true
     
-    # Gemini Client
+    # Gemini Client - Le mode 'lazy' empêche l'instanciation automatique
     App\Service\AI\GeminiClient:
         lazy: true
         arguments:
@@ -28,6 +28,7 @@ services:
             $apiKey: '%env(GEMINI_API_KEY)%'
             $model: '%env(GEMINI_MODEL)%'
             $budgetGuard: '@App\Service\AI\BudgetGuard'
+            $logger: '@logger'
     
     # Game Redis Service
     App\Service\GameRedisService:
@@ -38,7 +39,7 @@ services:
     App\Service\Security\RateLimiter:
         public: true
     
-    # Rate Limit Subscriber
+    # Rate Limit Subscriber - Intercepte les bots AVANT l'IA
     App\EventSubscriber\RateLimitSubscriber:
         arguments:
             $rateLimiter: '@App\Service\Security\RateLimiter'
