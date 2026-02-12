@@ -1,0 +1,22 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: PARRY API
+            description: API REST pour le jeu PARRY
+            version: 1.0.0
+        servers:
+            - url: http://192.168.0.26:8000
+              description: Développement
+        components:
+            securitySchemes:
+                Bearer:
+                    type: http
+                    scheme: bearer
+                    bearerFormat: JWT
+        security:
+            - Bearer: []
+    
+    areas:
+        default:
+            path_patterns:
+                - ^/api(?!/doc$)
