@@ -7,7 +7,15 @@
 </script>
 
 <template>
-  <slot />
+  <main class="gRow gRow--main">
+    <Panel label="PARRY V1.0">
+      <slot />
+    </Panel>
+    <PanelUtilisateur />
+  </main>
+  <aside class="gRow gRow--aside">
+    <PanelTerminal />
+  </aside>
 </template>
 
 <style lang="scss">

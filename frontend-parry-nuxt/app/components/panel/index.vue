@@ -22,5 +22,5 @@
 </template>
 
 <style scoped lang="scss">
-  @import "@/assets/style/components/panels";
+  @use "@/assets/style/components/panel";
 </style>

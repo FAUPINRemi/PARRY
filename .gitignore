@@ -23,3 +23,32 @@ backend-parry-symfony/composer.lock
 .env
 .env.example
 .env.*
+
+###################
+#### FRONT-END ####
+###################
+
+# Nuxt dev/build outputs
+frontend-parry-nuxt/.output
+frontend-parry-nuxt/.data
+frontend-parry-nuxt/.nuxt
+frontend-parry-nuxt/.nitro
+frontend-parry-nuxt/.cache
+frontend-parry-nuxt/dist
+
+# Node dependencies
+frontend-parry-nuxt/node_modules
+
+# Logs
+frontend-parry-nuxt/logs
+frontend-parry-nuxt/*.log
+
+# Misc
+frontend-parry-nuxt/.DS_Store
+frontend-parry-nuxt/.fleet
+frontend-parry-nuxt/.idea
+
+# Local env files
+frontend-parry-nuxt/.env
+frontend-parry-nuxt/.env.*
+frontend-parry-nuxt/!.env.example

@@ -5,7 +5,10 @@
   &Body {
     font-family: "DotGothic16", sans-serif;
     letter-spacing: spacing.$s2;
+
+    /*
     text-shadow: 0 0 5px #c8c8c8;
+
 
     &::after {
       content: "";
@@ -23,9 +26,10 @@
       );
       pointer-events: none;
     }
+*/
 
     & ::selection {
-      background: colors.$shade-010;
+      background: colors.$shade-020;
       text-shadow: none;
     }
 

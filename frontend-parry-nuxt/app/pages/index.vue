@@ -9,18 +9,6 @@
   };
 </script>
 
-<template>
-  <main class="gRow gRow--main">
-    <Panel label="Parry">
-      <button @click="handleClick">test</button>
-    </Panel>
-  </main>
-  <aside class="gRow gRow--aside">
-    <PanelTerminal />
-    <Panel label="Parry">
-      <button @click="handleClick">test</button>
-    </Panel>
-  </aside>
-</template>
+<template>test</template>
 
 <style scoped lang="scss"></style>

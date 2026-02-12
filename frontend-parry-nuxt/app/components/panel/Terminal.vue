@@ -19,10 +19,14 @@
 
 <template>
   <Panel label="Terminal" class="terminal">
-    <p v-for="(message, i) in messages" :key="i">> {{ message + i }}</p>
+    <ul>
+      <li v-for="(message, i) in messages" :key="i">
+        {{ message + " - " + i }}
+      </li>
+    </ul>
   </Panel>
 </template>
 
 <style lang="scss">
-  @use "@/assets/style/components/terminal";
+  @use "@/assets/style/components/panelTerminal";
 </style>
