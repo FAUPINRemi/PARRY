@@ -2,215 +2,177 @@
 
 namespace App\Controller\Api;
 
-use App\Service\AI\AIOrchestrator;
-use OpenApi\Attributes as OA;
+use App\Entity\Game;
+use App\Entity\User;
+use App\Repository\GameRepository;
+use App\Repository\UserRepository;
+use App\Service\Game\GameService;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/api/game', name: 'api_game_')]
+#[Route('/api/game')]
 class GameController extends AbstractController
 {
     public function __construct(
-        private readonly AIOrchestrator $aiOrchestrator
+        private readonly GameService $gameService,
+        private readonly GameRepository $gameRepository,
+        private readonly UserRepository $userRepository,
+        private readonly EntityManagerInterface $entityManager
     ) {}
     
-    /**
-     * Générer une question pour la manche
-     */
-    #[Route('/round/question', name: 'generate_question', methods: ['POST'])]
-    #[OA\Post(
-        path: '/api/game/round/question',
-        summary: 'Générer une question pour la manche',
-        tags: ['AI']
-    )]
-    #[OA\RequestBody(
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: 'round_number', type: 'integer', example: 1),
-                new OA\Property(property: 'previous_questions', type: 'array', items: new OA\Items(type: 'string'))
-            ]
-        )
-    )]
-    #[OA\Response(
-        response: 200,
-        description: 'Question générée',
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: 'question', type: 'string', example: 'Quel est ton plat préféré ?')
-            ]
-        )
-    )]
-    #[OA\Response(response: 500, description: 'Erreur de génération')]
-    public function generateQuestion(Request $request): JsonResponse
-    {
+    // Création d'une partie
+    #[Route('/create', name: 'api_game_create', methods: ['POST'])]
+    
+    public function createGame(Request $request): JsonResponse {
+        
         $data = json_decode($request->getContent(), true);
         
+        $isPrivate = $data['isPrivate'] ?? false;
+        
+    
         try {
-            $question = $this->aiOrchestrator->generateQuestion([
-                'round_number' => $data['round_number'] ?? 1,
-                'previous_questions' => $data['previous_questions'] ?? []
-            ]);
             
-            return $this->json(['question' => $question]);
+            $game = $this->gameService->createGame($isPrivate);
             
-        } catch (\Exception $e) {
-            return $this->json(['error' => $e->getMessage()], 500);
+            return $this->json([
+                'success' => true,
+                'game' => [
+                    'id' => $game->getId()->toString(),
+                    'code' => $game->getCode(),
+                    'isPrivate' => $game->isPrivate(),
+                    'status' => $game->getStatus()->value
+                ]], 201);
+                
+                } catch (\RuntimeException $e) {
+                    
+                    return $this->json([
+                        'success' => false,
+                        'error' => $e->getMessage()
+                    ], $e->getCode());
+                }
+    }
+
+    // Rejoindre une partie
+    #[Route('/{code}/join', name: 'api_game_join', methods: ['POST'])]
+    public function joinGame(string $code, Request $request): JsonResponse{
+
+        $data = json_decode($request->getContent(), true);
+        $userId = $data['userId'] ?? null;
+
+        if (!$userId) {
+            return $this->json(['success' => false, 'error' => 'USER_ID_REQUIS'], 400);
+        }
+        
+        try {
+            $game = $this->gameRepository->findOneBy(['code' => $code]);
+            if (!$game) {
+                return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+            }
+            
+            $user = $this->userRepository->find($userId);
+            
+            if (!$user) {
+                return $this->json(['success' => false, 'error' => 'UTILISATEUR_INTROUVABLE'], 404);
+            }
+            
+            $this->gameService->joinGame($game, $user);
+            return $this->json([ 'success' => true, 'message' => 'Partie rejointe avec succès'], 200);
+        } 
+        
+        catch (\RuntimeException $e) {
+            return $this->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], $e->getCode());
         }
     }
+
+    // Start partie
+    #[Route('/{code}/start', name: 'api_game_start', methods: ['POST'])]
     
-    /**
-     * L'IA répond à une question
-     */
-    #[Route('/round/ai-response', name: 'ai_response', methods: ['POST'])]
-    #[OA\Post(
-        path: '/api/game/round/ai-response',
-        summary: 'L\'IA génère une réponse à une question',
-        tags: ['AI']
-    )]
-    #[OA\RequestBody(
-        required: true,
-        content: new OA\JsonContent(
-            required: ['question'],
-            properties: [
-                new OA\Property(property: 'question', type: 'string', example: 'Quel est ton film préféré ?')
-            ]
-        )
-    )]
-    #[OA\Response(
-        response: 200,
-        description: 'Réponse générée',
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: 'response', type: 'string', example: 'J\'adore Inception, c\'est vraiment bien')
-            ]
-        )
-    )]
-    #[OA\Response(response: 400, description: 'Question manquante')]
-    #[OA\Response(response: 500, description: 'Erreur serveur')]
-    public function generateAIResponse(Request $request): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        $question = $data['question'] ?? '';
-        
-        if (empty($question)) {
-            return $this->json(['error' => 'Question manquante'], 400);
-        }
+    public function startGame(string $code): JsonResponse {
         
         try {
-            $response = $this->aiOrchestrator->generateResponse($question);
+            $game = $this->gameRepository->findOneBy(['code' => $code]);
             
-            return $this->json(['response' => $response]);
+            if (!$game) {
+                return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+            }
+            $this->gameService->debutGame($game);
             
+            return $this->json([ 'success' => true, 'message' => 'Partie démarrée' ], 200);
+        } catch (\RuntimeException $e) {
+            
+            return $this->json([ 'success' => false, 'error' => $e->getMessage()
+        ], $e->getCode());
+    }
+    }
+
+
+    // Statut de la partie
+    #[Route('/{code}/status', name: 'api_game_status', methods: ['GET'])]
+    
+    public function getGameStatus(string $code): JsonResponse
+    {
+        try {
+            $game = $this->gameRepository->findOneBy(['code' => $code]);
+            if (!$game) {
+                return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+            }
+            
+            $players = [];
+            foreach ($game->getPlayers() as $player) {
+                $players[] = [
+                    'id' => $player->getId()->toString(),
+                    'pseudo' => $player->getPseudo()
+                ];
+            }
+            
+            return $this->json([
+                'success' => true,
+                'game' => [
+                'id' => $game->getId()->toString(),
+                'code' => $game->getCode(),
+                'status' => $game->getStatus()->value,
+                'playerCount' => $game->getPlayers()->count(),
+                'players' => $players,
+                'startedAt' => $game->getStartedAt()?->format('c')
+                ]
+            ], 200);
         } catch (\Exception $e) {
-            return $this->json(['error' => $e->getMessage()], 500);
+
+            return $this->json(['success' => false, 'error' => 'ERREUR_SERVEUR'], 500);
         }
     }
+
+    // Verif condition de victoire
+    #[Route('/{code}/check-victory', name: 'api_game_check_victory', methods: ['POST'])]
     
-    /**
-     * Modérer une réponse utilisateur
-     */
-    #[Route('/moderate', name: 'moderate_content', methods: ['POST'])]
-    #[OA\Post(
-        path: '/api/game/moderate',
-        summary: 'Modérer un contenu',
-        tags: ['AI']
-    )]
-    #[OA\RequestBody(
-        required: true,
-        content: new OA\JsonContent(
-            required: ['content'],
-            properties: [
-                new OA\Property(property: 'content', type: 'string', example: 'Mon contenu à modérer'),
-                new OA\Property(property: 'type', type: 'string', enum: ['question', 'response'], example: 'response')
-            ]
-        )
-    )]
-    #[OA\Response(
-        response: 200,
-        description: 'Résultat de la modération',
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: 'is_safe', type: 'boolean', example: true),
-                new OA\Property(property: 'flagged_reasons', type: 'array', items: new OA\Items(type: 'string')),
-                new OA\Property(property: 'severity', type: 'string', enum: ['none', 'low', 'medium', 'high'])
-            ]
-        )
-    )]
-    public function moderateContent(Request $request): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        $content = $data['content'] ?? '';
-        $type = $data['type'] ?? 'response';
+    public function checkVictory(string $code): JsonResponse {
         
         try {
-            $result = $this->aiOrchestrator->moderateUserContent($content, $type);
+            $game = $this->gameRepository->findOneBy(['code' => $code]);
             
-            return $this->json($result);
+            if (!$game) {
+                return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+            }
             
-        } catch (\Exception $e) {
-            return $this->json(['error' => $e->getMessage()], 500);
-        }
-    }
-    
-    /**
-     * L'IA vote (analyse toutes les réponses)
-     */
-    #[Route('/round/ai-vote', name: 'ai_vote', methods: ['POST'])]
-    #[OA\Post(
-        path: '/api/game/round/ai-vote',
-        summary: 'L\'IA vote pour un joueur suspect',
-        tags: ['AI']
-    )]
-    #[OA\RequestBody(
-        required: true,
-        content: new OA\JsonContent(
-            required: ['question', 'players'],
-            properties: [
-                new OA\Property(property: 'question', type: 'string', example: 'Quel est ton film préféré ?'),
-                new OA\Property(
-                    property: 'players',
-                    type: 'array',
-                    items: new OA\Items(
-                        properties: [
-                            new OA\Property(property: 'player_id', type: 'string', example: 'player_abc123'),
-                            new OA\Property(property: 'response', type: 'string', example: 'J\'aime les films d\'action'),
-                            new OA\Property(property: 'is_ai', type: 'boolean', example: false)
-                        ],
-                        type: 'object'
-                    )
-                )
-            ]
-        )
-    )]
-    #[OA\Response(
-        response: 200,
-        description: 'Vote généré',
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: 'voted_for', type: 'string', example: 'player_abc123')
-            ]
-        )
-    )]
-    #[OA\Response(response: 400, description: 'Données manquantes')]
-    public function generateAIVote(Request $request): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        $question = $data['question'] ?? '';
-        $players = $data['players'] ?? [];
-        
-        if (empty($question) || empty($players)) {
-            return $this->json(['error' => 'Données manquantes'], 400);
-        }
-        
-        try {
-            $voteResult = $this->aiOrchestrator->voteAsHuman($players, $question);
+            $winner = $this->gameService->victorireCondition($game);
             
-            return $this->json(['voted_for' => $voteResult]);
-              
-        } catch (\Exception $e) {
-            return $this->json(['error' => $e->getMessage()], 500);
+            if ($winner) {
+                $this->gameService->finGame($game, $winner);
+                
+                return $this->json(['success' => true, 'gameOver' => true, 'winner' => $winner], 200);
+            }
+            
+            return $this->json(['success' => true, 'gameOver' => false], 200);
+        } 
+        catch (\Exception $e) {
+            return $this->json(['success' => false, 'error' => 'ERREUR_SERVEUR'], 500);
         }
     }
 }
+

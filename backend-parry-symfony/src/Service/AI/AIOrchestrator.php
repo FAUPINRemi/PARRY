@@ -14,15 +14,14 @@ class AIOrchestrator
         private readonly ModerationAI $moderation
     ) {}
     
-    /**
-     * Génère une question pour une nouvelle manche
-     */
+    
+    //Générer une question pour un round
     public function generateQuestion(array $context = []): string
     {
         $question = $this->questionGenerator->generateQuestion($context);
         
         // MODÉRATION DÉSACTIVÉE pour réduire les appels Gemini
-        // Économise ~1 requête par question
+       
         // À réactiver manuellement si besoin via moderateUserContent()
         /*
         $modResult = $this->moderation->moderateContent($question, 'question');
@@ -35,9 +34,7 @@ class AIOrchestrator
         return $question;
     }
     
-    /**
-     * Génère une réponse de l'IA à une question
-     */
+    //Généré une réponse 
     public function generateResponse(string $question, array $context = []): string
     {
         $response = $this->responseGenerator->generateResponse($question, $context);
@@ -55,11 +52,7 @@ class AIOrchestrator
         return $response;
     }
     
-    /**
-     * L'IA vote comme un humain
-     * @param array $playersWithResponses [['player_id' => 'uuid', 'response' => 'text', 'is_ai' => bool], ...]
-     * @param array $otherPlayersVotes [['player_id' => 'uuid', 'voted_for' => 'player_id'], ...]
-     */
+ 
     public function voteAsHuman(
         array $playersWithResponses,
         string $question,
