@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controller\Api;
 
 use App\Enum\GameStatus;
@@ -15,7 +16,6 @@ use Symfony\Component\Routing\Annotation\Route;
 class AIController extends AbstractController
 {
     public function __construct(
-        private AIJoueurService $aiJoueurService,
         private GameRepository $gameRepository,
         private EntityManagerInterface $em
     ) {}
@@ -43,17 +43,12 @@ class AIController extends AbstractController
             ]
         )
     )]
-    #[OA\Response(response: 400, description: 'La partie n\'est pas en cours ou aucun round actif')]
-    #[OA\Response(response: 404, description: 'Partie non trouvée')]
-    #[OA\Response(response: 500, description: 'Erreur lors de l\'action de l\'IA')]
-    public function playAI(string $gameCode): JsonResponse
+    public function playAI(string $gameCode, AIJoueurService $aiJoueurService): JsonResponse
     {
         $game = $this->gameRepository->findOneBy(['code' => $gameCode]);
         
         if (!$game) {
-            return $this->json([
-                'error' => 'Partie non trouvée'
-            ], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Partie non trouvée'], Response::HTTP_NOT_FOUND);
         }
 
         if ($game->getStatus() !== GameStatus::IN_PROGRESS) {
@@ -65,15 +60,12 @@ class AIController extends AbstractController
 
         $rounds = $game->getRounds();
         if ($rounds->isEmpty()) {
-            return $this->json([
-                'error' => 'Aucun round actif dans cette partie'
-            ], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Aucun round actif'], Response::HTTP_BAD_REQUEST);
         }
 
-        $currentRound = $rounds->last();
-
         try {
-            $this->aiJoueurService->playRound($currentRound);
+            // L'IA ne s'instancie réellement qu'à cette ligne précise
+            $aiJoueurService->playRound($rounds->last());
             
             return $this->json([
                 'success' => true,
