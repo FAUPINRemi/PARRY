@@ -7,16 +7,27 @@
 
   .panel {
     &--content {
-      display: flex;
-      flex-direction: column;
-
-      overflow-x: hidden;
-      overflow-y: auto;
-
-      justify-content: end;
-
       max-height: 100%;
       width: 100%;
+
+      ul {
+        height: 100%;
+
+        display: flex;
+        flex-direction: column-reverse;
+
+        overflow-y: auto;
+
+        scrollbar-width: none;
+
+        list-style-type: ">";
+
+        padding-left: spacing.$s5;
+
+        li {
+          padding-left: spacing.$s3;
+        }
+      }
     }
   }
 }

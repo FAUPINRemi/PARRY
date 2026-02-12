@@ -8,10 +8,10 @@
 
 <template>
   <main class="gRow gRow--main">
-    <Panel label="PARRY V1.0">
+    <Panel label="PARRY V1.0" icon="pixelarticons:mood-happy">
       <slot />
     </Panel>
-    <PanelUtilisateur />
+    <PanelProfil />
   </main>
   <aside class="gRow gRow--aside">
     <PanelTerminal />

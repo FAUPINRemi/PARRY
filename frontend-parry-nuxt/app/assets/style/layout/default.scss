@@ -1,5 +1,6 @@
 @use "../util/colors";
 @use "../util/spacing";
+@use "../util/font-sizes";
 
 .g {
   &Body {
@@ -51,7 +52,37 @@
     min-width: 100%;
 
     &--aside {
-      height: 30vh;
+      height: 26vh;
+    }
+  }
+
+  &Button {
+    display: flex;
+
+    align-items: center;
+
+    padding: spacing.$s2 spacing.$s5;
+    gap: spacing.$s4;
+
+    font-size: font-sizes.$f0;
+    font-family: "DotGothic16", sans-serif;
+    color: colors.$shade-090;
+
+    background-color: colors.$shade-010;
+    border: none;
+
+    cursor: pointer;
+
+    &:hover {
+      background-color: colors.$shade-020;
+    }
+
+    &.transparent {
+      background-color: transparent;
+
+      &:hover {
+        background-color: colors.$shade-020;
+      }
     }
   }
 }

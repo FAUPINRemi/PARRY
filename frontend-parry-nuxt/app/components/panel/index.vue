@@ -13,6 +13,7 @@
 <template>
   <section class="panel" v-bind="$attrs">
     <div v-if="props.label" class="panel--header">
+      <Icon v-if="icon" :name="icon" />
       <h2 class="panel--header--title">{{ props.label }}</h2>
     </div>
     <div class="panel--content">

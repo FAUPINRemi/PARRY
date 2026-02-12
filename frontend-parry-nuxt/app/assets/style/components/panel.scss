@@ -13,6 +13,9 @@
   border: 1px solid colors.$accent-main;
 
   &--header {
+    display: flex;
+    align-items: center;
+
     position: absolute;
 
     top: 0;
@@ -20,10 +23,12 @@
     transform: translateY(-50%);
 
     padding: 0 spacing.$s3;
+    gap: spacing.$s4;
 
     background-color: colors.$bg-main;
 
     &--title {
+      text-box: trim-both cap alphabetic;
       font-size: font-sizes.$f1;
     }
   }
@@ -31,4 +36,6 @@
   &--content {
     min-height: 100%;
   }
+
+  transition: 1s ease;
 }

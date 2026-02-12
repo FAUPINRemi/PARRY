@@ -1,10 +1,4 @@
 #!/bin/sh
-
-echo "=== DÉMARRAGE SERVEUR ==="
-exec php -S 0.0.0.0:8000 -t public 2>&1 | while read line; do
-  echo "[$(date)] $line"
-done
-
 set -e
 
 # Installer/mettre à jour les dépendances automatiquement

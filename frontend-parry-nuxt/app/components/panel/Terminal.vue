@@ -18,10 +18,10 @@
 </script>
 
 <template>
-  <Panel label="Terminal" class="terminal">
+  <Panel label="Terminal" icon="pixelarticons:script" class="terminal">
     <ul>
       <li v-for="(message, i) in messages" :key="i">
-        {{ message + " - " + i }}
+        {{ message }}
       </li>
     </ul>
   </Panel>

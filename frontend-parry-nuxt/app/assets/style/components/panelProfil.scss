@@ -1,0 +1,32 @@
+@use "./../util/colors";
+@use "./../util/spacing";
+@use "./../util/font-sizes";
+
+.profil {
+  display: flex;
+
+  max-width: 42vh;
+
+  .panel {
+    &--content {
+      position: relative;
+
+      max-height: 100%;
+      width: 100%;
+    }
+  }
+
+  &Open {
+    position: absolute;
+
+    top: calc(spacing.$s5 * 3 + 1px);
+    right: calc(spacing.$s5 * 3 + 1px);
+  }
+
+  &Close {
+    position: absolute;
+
+    top: spacing.$s0;
+    right: spacing.$s0;
+  }
+}
