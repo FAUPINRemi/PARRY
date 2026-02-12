@@ -1,11 +1,11 @@
 <?php
-
 namespace App\Controller\Api;
 
 use App\Enum\GameStatus;
 use App\Repository\GameRepository;
 use App\Service\AI\AIJoueurService;
 use Doctrine\ORM\EntityManagerInterface;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,9 +21,33 @@ class AIController extends AbstractController
     ) {}
 
     #[Route('/play/{gameCode}', name: 'ai_play', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/ai/play/{gameCode}',
+        summary: 'Faire jouer l\'IA',
+        tags: ['AI']
+    )]
+    #[OA\Parameter(
+        name: 'gameCode',
+        in: 'path',
+        required: true,
+        description: 'Code de la partie',
+        schema: new OA\Schema(type: 'string', example: 'ABC123')
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'L\'IA a joué son action',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'message', type: 'string', example: 'L\'IA a joué son action')
+            ]
+        )
+    )]
+    #[OA\Response(response: 400, description: 'La partie n\'est pas en cours ou aucun round actif')]
+    #[OA\Response(response: 404, description: 'Partie non trouvée')]
+    #[OA\Response(response: 500, description: 'Erreur lors de l\'action de l\'IA')]
     public function playAI(string $gameCode): JsonResponse
     {
-        // 1. Récupérer la partie
         $game = $this->gameRepository->findOneBy(['code' => $gameCode]);
         
         if (!$game) {
@@ -32,7 +56,6 @@ class AIController extends AbstractController
             ], Response::HTTP_NOT_FOUND);
         }
 
-        // 2. Vérifier que la partie est démarrée
         if ($game->getStatus() !== GameStatus::IN_PROGRESS) {
             return $this->json([
                 'error' => 'La partie n\'est pas en cours',
@@ -40,7 +63,6 @@ class AIController extends AbstractController
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        // 3. Récupérer le round actif
         $rounds = $game->getRounds();
         if ($rounds->isEmpty()) {
             return $this->json([
@@ -48,10 +70,8 @@ class AIController extends AbstractController
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        // Prendre le dernier round (le round actif)
         $currentRound = $rounds->last();
 
-        // 4. Laisser l'IA jouer son tour
         try {
             $this->aiJoueurService->playRound($currentRound);
             
