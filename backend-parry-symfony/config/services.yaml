@@ -22,6 +22,7 @@ services:
     
     # Gemini Client
     App\Service\AI\GeminiClient:
+        lazy: true
         arguments:
             $apiUrl: '%env(GEMINI_API_URL)%'
             $apiKey: '%env(GEMINI_API_KEY)%'
