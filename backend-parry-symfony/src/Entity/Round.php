@@ -46,6 +46,10 @@ class Round
     #[ORM\OneToMany(targetEntity: Vote::class, mappedBy: 'round', cascade: ['persist', 'remove'])]
     private Collection $votes;
 
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $eliminatedPlayer = null;
+
     public function __construct()
     {
         $this->id = Uuid::v4();
@@ -71,4 +75,6 @@ class Round
     public function setQuestionMaster(User $questionMaster): self { $this->questionMaster = $questionMaster; return $this; }
     public function getAnswers(): Collection { return $this->answers; }
     public function getVotes(): Collection { return $this->votes; }
+    public function getEliminatedPlayer(): ?User { return $this->eliminatedPlayer; }
+    public function setEliminatedPlayer(?User $eliminatedPlayer): self { $this->eliminatedPlayer = $eliminatedPlayer; return $this; }
 }

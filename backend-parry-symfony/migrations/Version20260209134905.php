@@ -7,14 +7,11 @@ namespace DoctrineMigrations;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/**
- * Auto-generated Migration: Please modify to your needs!
- */
 final class Version20260209134905 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Create question_category table and insert initial categories';
+        return 'Create question_category table, insert initial categories, and create AI user';
     }
 
     public function up(Schema $schema): void
@@ -93,10 +90,24 @@ final class Version20260209134905 extends AbstractMigration
         foreach ($categories as $category) {
             $this->addSql('INSERT INTO question_category (name, is_active) VALUES (:name, true)', ['name' => $category]);
         }
+
+        // Création de l'utilisateur IA
+        $this->addSql("
+            INSERT INTO users (id, email, pseudo, password, roles) 
+            VALUES (
+                gen_random_uuid(), 
+                'ai@parry.game', 
+                'IA-PARRY', 
+                '\$2y\$13\$dummyHashThatWillNeverBeUsedForAI', 
+                '[\"ROLE_AI\"]'
+            )
+            ON CONFLICT (email) DO NOTHING
+        ");
     }
 
     public function down(Schema $schema): void
     {
         $this->addSql('DROP TABLE question_category');
+        $this->addSql("DELETE FROM users WHERE email = 'ai@parry.game'");
     }
 }
