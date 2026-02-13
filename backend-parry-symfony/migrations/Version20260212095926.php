@@ -19,10 +19,7 @@ final class Version20260212095926 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        // this up() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE rounds ADD eliminated_player_id UUID DEFAULT NULL');
-        $this->addSql('ALTER TABLE rounds ADD CONSTRAINT FK_3A7FD554B96971E1 FOREIGN KEY (eliminated_player_id) REFERENCES users (id) NOT DEFERRABLE');
-        $this->addSql('CREATE INDEX IDX_3A7FD554B96971E1 ON rounds (eliminated_player_id)');
+    // Suppression de l'ajout redondant de la colonne eliminated_player_id (déjà présente dans la table rounds) 
     }
 
     public function down(Schema $schema): void

@@ -42,7 +42,7 @@ services:
 
     App\EventSubscriber\RateLimitSubscriber:
         arguments:
-            $rateLimiter: '@App\Service\Security\RateLimiter'
+            $rateLimiter: '@App\Security\RateLimiter'
             $logger: '@logger'
         tags:
             - { name: kernel.event_subscriber }
