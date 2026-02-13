@@ -3,7 +3,7 @@ set -e
 
 # Installer/mettre à jour les dépendances automatiquement
 echo "Vérification des dépendances Composer..."
-composer install --no-interaction
+composer update --no-interaction
 
 # Attendre que la base de données soit prête
 echo "Chargement bdd"
