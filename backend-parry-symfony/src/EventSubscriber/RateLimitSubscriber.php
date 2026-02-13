@@ -2,7 +2,7 @@
 
 namespace App\EventSubscriber;
 
-use App\Service\Security\RateLimiter;
+use App\Security\RateLimiter;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;

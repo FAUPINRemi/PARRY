@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Service\Security;
+namespace App\Security;
 
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Contracts\Cache\ItemInterface;
