@@ -34,6 +34,33 @@
       text-shadow: none;
     }
 
+    input {
+      border: none;
+
+      font-family: "DotGothic16", sans-serif;
+      letter-spacing: spacing.$s2;
+      text-transform: uppercase;
+      color: colors.$shade-090;
+
+      &:focus {
+        outline: none;
+        box-shadow: inset 0px 0px 0px 1px colors.$shade-020;
+      }
+    }
+
+    p,
+    a,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    input,
+    button {
+      font-weight: 400;
+    }
+
     #__nuxt {
       display: grid;
 
@@ -67,9 +94,10 @@
 
     align-items: center;
 
+    height: fit-content;
     width: fit-content;
 
-    padding: spacing.$s2 spacing.$s4;
+    padding: spacing.$s2 spacing.$s3;
     gap: spacing.$s4;
 
     font-size: font-sizes.$f0;
@@ -95,7 +123,7 @@
 
     // gButton important
     &.important {
-      background-color: colors.$shade-090;
+      background-color: colors.$shade-100;
       color: colors.$shade-010;
 
       &:hover {

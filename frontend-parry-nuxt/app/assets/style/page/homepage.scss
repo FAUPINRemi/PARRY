@@ -1,0 +1,63 @@
+@use "./../util/colors";
+@use "./../util/spacing";
+@use "./../util/font-sizes";
+
+.homepage {
+  display: flex;
+
+  align-items: end;
+  justify-content: center;
+
+  padding: spacing.$s6;
+
+  &--title {
+    display: none;
+  }
+
+  &--ascii {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    line-height: 100%;
+    letter-spacing: 0;
+
+    pointer-events: none;
+    user-select: none;
+  }
+
+  &--createRoom,
+  &--joinRoom {
+    display: flex;
+    flex-direction: column;
+
+    padding: spacing.$s6 spacing.$s8;
+  }
+
+  &--createRoom {
+    align-items: center;
+    justify-content: center;
+
+    gap: spacing.$s7;
+
+    background-color: colors.$shade-010;
+  }
+
+  &--joinRoom {
+    gap: spacing.$s4;
+
+    &--search {
+      display: flex;
+
+      input {
+        min-width: 20vw;
+
+        padding: spacing.$s2 spacing.$s5;
+
+        background-color: colors.$shade-010;
+
+        color: colors.$shade-090;
+      }
+    }
+  }
+}

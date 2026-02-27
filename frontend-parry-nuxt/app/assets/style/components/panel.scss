@@ -12,6 +12,8 @@
 
   border: 1px solid colors.$accent-main;
 
+  border-radius: spacing.$s3;
+
   &--header {
     display: flex;
     align-items: center;
@@ -34,6 +36,13 @@
   }
 
   &--content {
+    position: relative;
+
+    display: grid;
+
+    grid-column: 1;
+    grid-row: 1;
+
     min-height: 100%;
   }
 }
