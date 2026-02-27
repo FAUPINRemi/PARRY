@@ -1,0 +1,16 @@
+@use "./../util/colors";
+@use "./../util/spacing";
+@use "./../util/font-sizes";
+
+.panelProfilNotConnected {
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+
+  gap: spacing.$s9;
+
+  p {
+    text-align: center;
+  }
+}

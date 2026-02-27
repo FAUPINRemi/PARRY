@@ -20,7 +20,7 @@
 <template>
   <Panel label="Terminal" icon="pixelarticons:script" class="terminal">
     <ul>
-      <li v-for="(message, i) in messages" :key="i">
+      <li v-for="(message, i) in messages.slice().reverse()" :key="i">
         {{ message }}
       </li>
     </ul>

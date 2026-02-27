@@ -56,12 +56,20 @@
     }
   }
 
+  ///
+  /// Default Button Styles -
+  /// gButton
+  ///
+  /// Available classes : important, transparentBackgroud, inline, iconOnly
+  ///
   &Button {
     display: flex;
 
     align-items: center;
 
-    padding: spacing.$s2 spacing.$s5;
+    width: fit-content;
+
+    padding: spacing.$s2 spacing.$s4;
     gap: spacing.$s4;
 
     font-size: font-sizes.$f0;
@@ -73,11 +81,31 @@
 
     cursor: pointer;
 
+    &::before {
+      content: "[";
+    }
+
+    &::after {
+      content: "]";
+    }
+
     &:hover {
       background-color: colors.$shade-020;
     }
 
-    &.transparentBackground {
+    // gButton important
+    &.important {
+      background-color: colors.$shade-090;
+      color: colors.$shade-010;
+
+      &:hover {
+        background-color: colors.$shade-080;
+      }
+    }
+
+    // gButton transparentBackground
+    &.transparentBackground,
+    &.inline {
       background-color: transparent;
 
       &:hover {
@@ -85,6 +113,17 @@
       }
     }
 
+    // gButton inline
+    &.inline {
+      border-bottom: 1px solid colors.$shade-090;
+
+      &::after,
+      &::before {
+        content: none;
+      }
+    }
+
+    // gButton iconOnly
     &.iconOnly {
       padding: spacing.$s2;
       gap: spacing.$s0;

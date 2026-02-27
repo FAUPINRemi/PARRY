@@ -1,30 +1,30 @@
 <script setup lang="ts">
+  import ProfileNotConnected from "./ProfileNotConnected.vue";
+
   const { emitEvent } = useTerminal();
   let isHidden = ref(false);
 
   function openPanel() {
     isHidden.value = false;
-  }
-  function closePanel() {
-    isHidden.value = true;
-  }
-
-  onMounted(() => {
     emitEvent({
-      message: "TODO : Login",
+      message: "Panneau utilisateur ouvert",
       type: "info",
     });
-  });
+  }
 
-  function handleClick() {
-    emitEvent({ message: "TODO : Login", type: "info" });
+  function closePanel() {
+    isHidden.value = true;
+    emitEvent({
+      message: "Panneau utilisateur fermé",
+      type: "info",
+    });
   }
 </script>
 
 <template>
   <Panel
     v-if="!isHidden"
-    label="Profil"
+    label="Utilisateur"
     icon="pixelarticons:user"
     class="profil">
     <button
@@ -33,7 +33,7 @@
       <Icon name="pixelarticons:close-box" />
       Close
     </button>
-    <button @click="handleClick" class="gButton">Log</button>
+    <ProfileNotConnected />
   </Panel>
   <button v-else @click="openPanel" class="gButton profilOpen">
     <Icon name="pixelarticons:user" />

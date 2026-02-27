@@ -11,7 +11,7 @@
     <Panel label="PARRY V1.0" icon="pixelarticons:mood-happy">
       <slot />
     </Panel>
-    <PanelProfil />
+    <PanelProfile />
   </main>
   <aside class="gRow gRow--aside">
     <PanelTerminal />
