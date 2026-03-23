@@ -1,9 +1,16 @@
+@use "../util/media-queries" as *;
 @use "./../util/colors";
 @use "./../util/spacing";
 @use "./../util/font-sizes";
 
 .terminal {
   display: flex;
+
+  @include respond-to(xs) {
+    flex-direction: column;
+    align-items: stretch;
+    padding: spacing.$s1;
+  }
 
   .panel {
     &--content {
@@ -24,10 +31,18 @@
 
         padding-left: spacing.$s5;
 
+        @include respond-to(xs) {
+          padding-left: spacing.$s2;
+        }
+
         li {
           padding-left: spacing.$s3;
 
           font-size: font-sizes.$f0;
+          @include respond-to(xs) {
+            font-size: 0.9rem;
+            padding-left: spacing.$s1;
+          }
         }
       }
     }

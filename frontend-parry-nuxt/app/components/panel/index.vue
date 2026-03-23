@@ -1,27 +1,27 @@
 <script setup lang="ts">
-  //TODO : May cause problems when inhereting from use cases
-  defineOptions({
-    inheritAttrs: false,
-  });
+defineOptions({
+	inheritAttrs: false,
+})
 
-  const props = defineProps({
-    icon: { type: String, required: false },
-    label: { type: String, required: false },
-  });
+const props = defineProps({
+	icon: { type: String, required: false },
+	label: { type: String, required: false },
+})
 </script>
 
 <template>
-  <section class="panel" v-bind="$attrs">
-    <div v-if="props.label" class="panel--header">
-      <Icon v-if="icon" :name="icon" />
-      <h2 class="panel--header--title">{{ props.label }}</h2>
-    </div>
-    <div class="panel--content">
-      <slot></slot>
-    </div>
-  </section>
+	<section class="panel" v-bind="$attrs">
+		<div v-if="props.label" class="panel--header">
+			<NuxtIcon v-if="props.icon" :name="props.icon" />
+			<h2 class="panel--header--title"> {{ props.label }} </h2>
+		</div>
+
+		<div class="panel--content">
+			<slot />
+		</div>
+	</section>
 </template>
 
 <style scoped lang="scss">
-  @use "@/assets/style/components/panel";
+@use "@/assets/style/components/panel";
 </style>

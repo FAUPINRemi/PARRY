@@ -1,3 +1,4 @@
+@use "../util/media-queries" as *;
 @use "./../util/colors";
 @use "./../util/spacing";
 @use "./../util/font-sizes";
@@ -10,8 +11,25 @@
 
   padding: spacing.$s6;
 
+  @include respond-to(sm) {
+    flex-direction: column;
+    align-items: stretch;
+    padding: spacing.$s2;
+  }
+
+  @include respond-to(xs) {
+    padding: spacing.$s1;
+  }
+
   &--title {
-    display: none;
+    display: block;
+    font-size: font-sizes.$f6;
+    text-align: center;
+    margin-bottom: spacing.$s6;
+    @include respond-to(sm) {
+      font-size: font-sizes.$f4;
+      margin-bottom: spacing.$s3;
+    }
   }
 
   &--ascii {
@@ -24,6 +42,13 @@
 
     pointer-events: none;
     user-select: none;
+    font-size: font-sizes.$f2;
+    @include respond-to(sm) {
+      font-size: font-sizes.$f1;
+    }
+    @include respond-to(xs) {
+      font-size: 0.7rem;
+    }
   }
 
   &--createRoom,
@@ -32,6 +57,13 @@
     flex-direction: column;
 
     padding: spacing.$s6 spacing.$s8;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    margin: spacing.$s4;
+    @include respond-to(sm) {
+      padding: spacing.$s3 spacing.$s2;
+      margin: spacing.$s2 0;
+    }
   }
 
   &--createRoom {
@@ -41,6 +73,9 @@
     gap: spacing.$s7;
 
     background-color: colors.$shade-010;
+    @include respond-to(sm) {
+      gap: spacing.$s4;
+    }
   }
 
   &--joinRoom {
@@ -48,6 +83,12 @@
 
     &--search {
       display: flex;
+      flex-direction: row;
+      gap: spacing.$s2;
+      @include respond-to(xs) {
+        flex-direction: column;
+        gap: spacing.$s1;
+      }
 
       input {
         min-width: 20vw;
@@ -57,7 +98,33 @@
         background-color: colors.$shade-010;
 
         color: colors.$shade-090;
+        border-radius: 6px;
+        border: 1px solid colors.$shade-030;
+        @include respond-to(xs) {
+          min-width: 0;
+          width: 100%;
+        }
       }
     }
+  }
+
+.gButton {
+  @include respond-to(xs) {
+    width: auto;
+    margin-bottom: spacing.$s1;
+    padding: spacing.$s2 spacing.$s3;
+    font-size: font-sizes.$f1;
+  }
+}
+  form {
+    @include respond-to(xs) {
+      width: 100%;
+    }
+  }
+
+  @include respond-to(xs) {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
   }
 }

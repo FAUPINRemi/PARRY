@@ -1,0 +1,20 @@
+// Responsive breakpoints
+$breakpoint-xs: 480px;
+$breakpoint-sm: 768px;
+$breakpoint-md: 1024px;
+$breakpoint-lg: 1280px;
+$breakpoint-xl: 1536px;
+
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == xs {
+    @media (max-width: #{$breakpoint-xs}) { @content; }
+  } @else if $breakpoint == sm {
+    @media (max-width: #{$breakpoint-sm}) { @content; }
+  } @else if $breakpoint == md {
+    @media (max-width: #{$breakpoint-md}) { @content; }
+  } @else if $breakpoint == lg {
+    @media (max-width: #{$breakpoint-lg}) { @content; }
+  } @else if $breakpoint == xl {
+    @media (max-width: #{$breakpoint-xl}) { @content; }
+  }
+}

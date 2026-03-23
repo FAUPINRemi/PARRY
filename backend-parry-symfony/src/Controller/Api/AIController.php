@@ -64,7 +64,6 @@ class AIController extends AbstractController
         }
 
         try {
-            // L'IA ne s'instancie réellement qu'à cette ligne précise
             $aiJoueurService->playRound($rounds->last());
             
             return $this->json([

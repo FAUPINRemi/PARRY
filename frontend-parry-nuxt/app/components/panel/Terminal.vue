@@ -1,32 +1,32 @@
 <script setup lang="ts">
-  const { onEvent } = useTerminal();
-  const messages = ref<string[]>([]);
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 
-  let unhook: () => void;
+const { onEvent } = useTerminal()
 
-  onMounted(() => {
-    // Start listening only when mounted on the client
-    unhook = onEvent((data) => {
-      messages.value.push(data.message);
-    });
-  });
+const messages = ref<string[]>([])
+let unhook: (() => void) | undefined
 
-  onBeforeUnmount(() => {
-    // Clean up to prevent memory leaks
-    if (unhook) unhook();
-  });
+onMounted(() => {
+	unhook = onEvent((data: any) => {
+		messages.value.push(data.message)
+	})
+})
+
+onBeforeUnmount(() => {
+	if (unhook) unhook()
+})
 </script>
 
 <template>
-  <Panel label="Terminal" icon="pixelarticons:script" class="terminal">
-    <ul>
-      <li v-for="(message, i) in messages.slice().reverse()" :key="i">
-        {{ message }}
-      </li>
-    </ul>
-  </Panel>
+	<Panel label="Terminal" icon="pixelarticons:script" class="terminal">
+		<ul>
+			<li v-for="(message, i) in messages.slice().reverse()" :key="i">
+				{{ message }}
+			</li>
+		</ul>
+	</Panel>
 </template>
 
 <style lang="scss">
-  @use "@/assets/style/components/panelTerminal";
+@use "@/assets/style/components/panelTerminal";
 </style>

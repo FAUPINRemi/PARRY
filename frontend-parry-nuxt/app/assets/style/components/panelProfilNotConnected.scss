@@ -1,3 +1,4 @@
+@use "../util/media-queries" as *;
 @use "./../util/colors";
 @use "./../util/spacing";
 @use "./../util/font-sizes";
@@ -10,7 +11,20 @@
 
   gap: spacing.$s9;
 
+  width: 100%;
+  max-width: 350px;
+  margin: 0 auto;
+
+  @include respond-to(xs) {
+    max-width: 100vw;
+    gap: spacing.$s3;
+    padding: spacing.$s2;
+  }
+
   p {
     text-align: center;
+    @include respond-to(xs) {
+      font-size: font-sizes.$f0;
+    }
   }
 }

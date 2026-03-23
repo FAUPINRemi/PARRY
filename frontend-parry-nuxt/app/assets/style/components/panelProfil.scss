@@ -1,3 +1,4 @@
+@use "../util/media-queries" as *;
 @use "./../util/colors";
 @use "./../util/spacing";
 @use "./../util/font-sizes";
@@ -6,6 +7,12 @@
   display: flex;
 
   max-width: 42vh;
+
+  @include respond-to(sm) {
+    max-width: 100vw;
+    flex-direction: column;
+    align-items: stretch;
+  }
 
   .panel {
     &--content {
@@ -20,6 +27,9 @@
       width: 100%;
 
       gap: spacing.$s4;
+      @include respond-to(xs) {
+        gap: spacing.$s2;
+      }
     }
   }
 
@@ -28,6 +38,10 @@
 
     top: calc(spacing.$s5 * 3 + 1px);
     right: calc(spacing.$s5 * 3 + 1px);
+    @include respond-to(xs) {
+      position: static;
+      margin: spacing.$s2 0;
+    }
   }
 
   &Close {
@@ -41,6 +55,10 @@
 
     span {
       font-size: font-sizes.$f1;
+    }
+    @include respond-to(xs) {
+      position: static;
+      margin: spacing.$s1 0;
     }
   }
 }
