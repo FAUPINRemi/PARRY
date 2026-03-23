@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 
 const { emitEvent } = useTerminal()
+const { apiFetch } = useApi()
 
 const showLogin = ref(true)
 const email = ref('')
@@ -21,7 +22,7 @@ async function login() {
 	error.value = null
 
 	try {
-		const res = await fetch('http://localhost:8000/api/login', {
+		const res = await apiFetch('/api/login', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ username: email.value, password: password.value })
@@ -57,7 +58,7 @@ async function register() {
 	success.value = false
 
 	try {
-		const res = await fetch('http://localhost:8000/api/register', {
+		const res = await apiFetch('/api/register', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ email: email.value, password: password.value, pseudo: pseudo.value })

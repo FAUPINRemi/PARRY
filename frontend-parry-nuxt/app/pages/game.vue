@@ -3,6 +3,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 const { emitEvent } = useTerminal()
+const { apiFetch } = useApi()
 const route = useRoute()
 
 type Step = 'question' | 'reponse' | 'vote' | 'result'
@@ -116,7 +117,7 @@ async function fetchPlayers() {
 	const jwt = process.client ? localStorage.getItem('jwt') : null
 
 	try {
-		const res = await fetch(`http://localhost:8000/api/game/${gameCode.value}/status`, {
+		const res = await apiFetch(`/api/game/${gameCode.value}/status`, {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
@@ -145,7 +146,7 @@ async function fetchQuestion() {
 	questionError.value = null
 
 	try {
-		const res = await fetch('http://localhost:8000/api/ai/question', {
+		const res = await apiFetch('/api/ai/question', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ context: '' })
@@ -155,7 +156,7 @@ async function fetchQuestion() {
 
 		if (res.ok && data?.question) {
 			// Moderation IA temporairement désactivée
-			// const modRes = await fetch('http://localhost:8000/api/moderation', {
+			// const modRes = await apiFetch('/api/moderation', {
 			//     method: 'POST',
 			//     headers: { 'Content-Type': 'application/json' },
 			//     body: JSON.stringify({ text: data.question })
@@ -192,7 +193,7 @@ async function submitResponse() {
 		let finalResponse = response.value
 
 		if (!finalResponse) {
-			const aiRes = await fetch('http://localhost:8000/api/ai/answer', {
+			const aiRes = await apiFetch('/api/ai/answer', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ question: question.value, context: '' })
@@ -209,7 +210,7 @@ async function submitResponse() {
 		}
 
 		// Moderation IA temporairement désactivée
-		// const modRes = await fetch('http://localhost:8000/api/moderation', {
+		// const modRes = await apiFetch('/api/moderation', {
 		//     method: 'POST',
 		//     headers: { 'Content-Type': 'application/json' },
 		//     body: JSON.stringify({ text: finalResponse })
@@ -228,7 +229,7 @@ async function submitResponse() {
 			return
 		}
 
-		const res = await fetch(`http://localhost:8000/api/round/${roundId.value}/response`, {
+		const res = await apiFetch(`/api/round/${roundId.value}/response`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -266,7 +267,7 @@ async function submitVote() {
 			return
 		}
 
-		const res = await fetch(`http://localhost:8000/api/round/${roundId.value}/vote`, {
+		const res = await apiFetch(`/api/round/${roundId.value}/vote`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -456,7 +457,42 @@ const canVote = computed(() => step.value === 'vote' && !voteLoading && myUserId
 </template>
 
 <style scoped lang="scss">
-@use "../assets/style/page/homepage";
+.homepageWrap {
+	position: relative;
+	min-height: 100vh;
+	width: 100%;
+	max-width: 1100px;
+	margin: 0 auto;
+	padding: 1.25rem;
+	box-sizing: border-box;
+	padding-bottom: 180px;
+}
+
+.homepageGrid {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: 1fr;
+	align-items: start;
+}
+
+@media (min-width: 1024px) {
+	.homepageGrid {
+		grid-template-columns: 1fr 1fr;
+		align-items: stretch;
+	}
+}
+
+.leftCol {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	min-width: 0;
+}
+
+.rightCol {
+	min-height: 1px;
+	min-width: 0;
+}
 
 .game-terminal {
 	position: fixed;
@@ -471,6 +507,7 @@ const canVote = computed(() => step.value === 'vote' && !voteLoading && myUserId
 	gap: 1rem;
 	z-index: 100;
 }
+
 .terminal-input {
 	width: 100%;
 	padding: 0.7rem 1rem;

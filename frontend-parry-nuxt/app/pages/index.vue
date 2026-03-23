@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const { emitEvent } = useTerminal()
+const { apiFetch } = useApi()
 const router = useRouter()
 
 const gameInfo = ref<{ code?: string; id?: string; isPrivate?: boolean; status?: string } | null>(null)
@@ -21,7 +22,7 @@ async function createGame() {
 	try {
 		const jwt = process.client ? localStorage.getItem('jwt') : null
 
-		const res = await fetch('http://localhost:8000/api/game/create', {
+		const res = await apiFetch('/api/game/create', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -60,7 +61,7 @@ async function joinGame() {
 		const userId = (process.client ? localStorage.getItem('userId') : null) || 'demo-user-id'
 		const jwt = process.client ? localStorage.getItem('jwt') : null
 
-		const res = await fetch(`http://localhost:8000/api/game/${joinCode.value}/join`, {
+		const res = await apiFetch(`/api/game/${joinCode.value}/join`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
