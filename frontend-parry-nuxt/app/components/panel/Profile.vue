@@ -26,7 +26,7 @@ function closePanel() {
 <template>
 	<Panel v-if="!isHidden" label="Utilisateur" icon="pixelarticons:user" class="profil">
 		<button @click="closePanel" class="gButton profilClose transparentBackground iconOnly">
-			<NuxtIcon name="pixelarticons:close-box" />
+			<Icon name="pixelarticons:close-box" />
 			Close
 		</button>
 
@@ -34,7 +34,7 @@ function closePanel() {
 	</Panel>
 
 	<button v-else @click="openPanel" class="gButton profilOpen">
-		<NuxtIcon name="pixelarticons:user" />
+		<Icon name="pixelarticons:user" />
 		Profil
 	</button>
 </template>

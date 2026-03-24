@@ -12,7 +12,7 @@ const props = defineProps({
 <template>
 	<section class="panel" v-bind="$attrs">
 		<div v-if="props.label" class="panel--header">
-			<NuxtIcon v-if="props.icon" :name="props.icon" />
+			<Icon v-if="props.icon" :name="props.icon" />
 			<h2 class="panel--header--title"> {{ props.label }} </h2>
 		</div>
 

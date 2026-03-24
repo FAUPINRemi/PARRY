@@ -7,6 +7,9 @@
   position: relative;
 
   width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 
   @include respond-to(sm) {
     margin: spacing.$s2;
@@ -57,12 +60,10 @@
   &--content {
     position: relative;
 
-    display: grid;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 
-    grid-column: 1;
-    grid-row: 1;
-
-    min-height: 100%;
     @include respond-to(xs) {
       padding: spacing.$s1 0;
     }

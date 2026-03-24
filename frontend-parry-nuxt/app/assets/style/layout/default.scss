@@ -64,9 +64,10 @@
     #__nuxt {
       display: grid;
 
-      grid-template-rows: 1fr;
+      grid-template-rows: 1fr auto;
 
       height: 100vh;
+      overflow: hidden;
 
       padding: spacing.$s5;
     }
@@ -75,7 +76,7 @@
   &Row {
     display: flex;
 
-    min-height: 100%;
+    min-height: 0;
     min-width: 100%;
 
     &--aside {
@@ -83,12 +84,6 @@
     }
   }
 
-  ///
-  /// Default Button Styles -
-  /// gButton
-  ///
-  /// Available classes : important, transparentBackgroud, inline, iconOnly
-  ///
   &Button {
     display: flex;
 
@@ -121,7 +116,6 @@
       background-color: colors.$shade-020;
     }
 
-    // gButton important
     &.important {
       background-color: colors.$shade-100;
       color: colors.$shade-010;
@@ -131,7 +125,6 @@
       }
     }
 
-    // gButton transparentBackground
     &.transparentBackground,
     &.inline {
       background-color: transparent;
@@ -141,7 +134,6 @@
       }
     }
 
-    // gButton inline
     &.inline {
       border-bottom: 1px solid colors.$shade-090;
 
@@ -151,7 +143,6 @@
       }
     }
 
-    // gButton iconOnly
     &.iconOnly {
       padding: spacing.$s2;
       gap: spacing.$s0;
