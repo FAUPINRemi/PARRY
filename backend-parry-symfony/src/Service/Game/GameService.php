@@ -43,8 +43,11 @@ class GameService
         $maxTry = 100;
         for ($i = 0; $i < $maxTry; $i++) {
             $code = strtoupper(bin2hex(random_bytes(3)));
-            $result = $this->gameRedisService->getRedis()->set("game:code:{$code}", 1, ['nx', 'ex' => 3600]);
+            $redis = $this->gameRedisService->getRedis();
+            // setnx retourne 1 si la clé n'existait pas (code unique), 0 sinon
+            $result = $redis->setnx("game:code:{$code}", '1');
             if ($result) {
+                $redis->expire("game:code:{$code}", 3600);
                 return $code;
             }
         }

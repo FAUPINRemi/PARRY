@@ -7,9 +7,9 @@ use Symfony\Contracts\Cache\ItemInterface;
 
 class RateLimiter
 {
-    private const MAX_REQUESTS_PER_SECOND = 2;
-    private const MAX_REQUESTS_PER_MINUTE = 60;
-    private const MAX_REQUESTS_PER_HOUR = 500;
+    private const MAX_REQUESTS_PER_SECOND = 15;
+    private const MAX_REQUESTS_PER_MINUTE = 300;
+    private const MAX_REQUESTS_PER_HOUR = 5000;
     private const BLOCK_DURATION = 300; // 5 minutes en secondes
     
     private FilesystemAdapter $cache;
@@ -25,8 +25,15 @@ class RateLimiter
      * @param string $endpoint Route appelée (optionnel, pour limite spécifique)
      * @return array ['allowed' => bool, 'reason' => string|null]
      */
+    private function sanitizeKey(string $identifier): string
+    {
+        return substr(preg_replace('/[^a-zA-Z0-9_\-]/', '_', $identifier), 0, 64);
+    }
+
     public function isAllowed(string $identifier, string $endpoint = 'global'): array
     {
+        $identifier = $this->sanitizeKey($identifier);
+
         // Vérifier si l'IP est bloquée
         if ($this->isBlocked($identifier)) {
             return [
@@ -89,17 +96,17 @@ class RateLimiter
     private function recordRequest(string $identifier, string $window, int $ttl): void
     {
         $key = "rate_limit_{$identifier}_{$window}";
-        
-        $count = $this->cache->get($key, function (ItemInterface $item) use ($ttl) {
+
+        $item = $this->cache->getItem($key);
+        if (!$item->isHit()) {
+            // Nouvelle fenêtre : initialiser avec TTL fixe
+            $item->set(1);
             $item->expiresAfter($ttl);
-            return 0;
-        });
-        
-        $this->cache->delete($key);
-        $this->cache->get($key, function (ItemInterface $item) use ($ttl, $count) {
-            $item->expiresAfter($ttl);
-            return $count + 1;
-        });
+        } else {
+            // Fenêtre existante : incrémenter SANS réinitialiser le TTL
+            $item->set((int)$item->get() + 1);
+        }
+        $this->cache->save($item);
     }
     
     private function incrementAbuse(string $identifier): void
@@ -154,6 +161,7 @@ class RateLimiter
     
     public function unblock(string $identifier): void
     {
+        $identifier = $this->sanitizeKey($identifier);
         $this->cache->delete("blocked_{$identifier}");
         $this->cache->delete("abuse_count_{$identifier}");
     }

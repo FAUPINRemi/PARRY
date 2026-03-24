@@ -4,8 +4,11 @@ namespace App\Controller\Api;
 use App\Entity\Game;
 use App\Entity\User;
 use App\Repository\GameRepository;
+use App\Repository\RoundRepository;
 use App\Repository\UserRepository;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use App\Service\Game\GameService;
+use App\Service\GameRedisService;
 use Doctrine\ORM\EntityManagerInterface;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,8 +22,11 @@ class GameController extends AbstractController
     public function __construct(
         private readonly GameService $gameService,
         private readonly GameRepository $gameRepository,
+        private readonly RoundRepository $roundRepository,
         private readonly UserRepository $userRepository,
-        private readonly EntityManagerInterface $entityManager
+        private readonly EntityManagerInterface $entityManager,
+        private readonly GameRedisService $gameRedisService,
+        private readonly UserPasswordHasherInterface $passwordHasher
     ) {}
 
     #[Route('/create', name: 'api_game_create', methods: ['POST'])]
@@ -118,28 +124,21 @@ class GameController extends AbstractController
     #[OA\Response(response: 404, description: 'Partie ou utilisateur introuvable')]
     public function joinGame(string $code, Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        $userId = $data['userId'] ?? null;
-
-        if (!$userId) {
-            return $this->json(['success' => false, 'error' => 'USER_ID_REQUIS'], 400);
+        /** @var \App\Entity\User|null $user */
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['success' => false, 'error' => 'NON_AUTHENTIFIE'], 401);
         }
-        
+
         try {
             $game = $this->gameRepository->findOneBy(['code' => $code]);
             if (!$game) {
                 return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
             }
-            
-            $user = $this->userRepository->find($userId);
-            
-            if (!$user) {
-                return $this->json(['success' => false, 'error' => 'UTILISATEUR_INTROUVABLE'], 404);
-            }
-            
+
             $this->gameService->joinGame($game, $user);
             return $this->json(['success' => true, 'message' => 'Partie rejointe avec succès'], 200);
-        } 
+        }
         catch (\RuntimeException $e) {
             return $this->json([
                 'success' => false,
@@ -172,19 +171,78 @@ class GameController extends AbstractController
         )
     )]
     #[OA\Response(response: 404, description: 'Partie introuvable')]
-    public function startGame(string $code): JsonResponse {
+    public function startGame(string $code, Request $request): JsonResponse {
+        $data = json_decode($request->getContent(), true) ?? [];
+        $proAiEnabled = $data['proAiEnabled'] ?? false;
+
         try {
             $game = $this->gameRepository->findOneBy(['code' => $code]);
-            
             if (!$game) {
                 return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
             }
+
+            // Trouver ou créer le joueur IA
+            $aiUser = $this->userRepository->findOneBy(['email' => 'ai@parry.game']);
+            if (!$aiUser) {
+                $aiUser = new User();
+                $aiUser->setEmail('ai@parry.game');
+                $aiUser->setPseudo('IA');
+                $aiUser->setRoles(['ROLE_AI']);
+                $aiUser->setPassword($this->passwordHasher->hashPassword($aiUser, bin2hex(random_bytes(16))));
+                $this->entityManager->persist($aiUser);
+                $this->entityManager->flush();
+            }
+
             $this->gameService->debutGame($game);
-            
+
+            // Ajouter l'IA comme joueur
+            $this->gameService->addAIPlayer($game, $aiUser);
+
+            // Assignation du rôle Pro-IA si activé
+            if ($proAiEnabled) {
+                $identifier = $game->getCode() ?? $game->getId()->toString();
+                $redis = $this->gameRedisService->getRedis();
+                $playersRaw = $redis->hgetall("game:{$identifier}:players") ?: [];
+
+                // Garder uniquement les joueurs humains vivants
+                $humanIds = [];
+                foreach ($playersRaw as $playerId => $playerJson) {
+                    $p = json_decode($playerJson, true);
+                    if (!($p['isAI'] ?? false) && ($p['isAlive'] ?? true)) {
+                        $humanIds[] = $playerId;
+                    }
+                }
+
+                if (!empty($humanIds)) {
+                    $proAiId = $humanIds[array_rand($humanIds)];
+                    $redis->set("game:{$identifier}:proai", $proAiId, ['ex' => 86400]);
+                }
+            }
+
             return $this->json(['success' => true, 'message' => 'Partie démarrée'], 200);
         } catch (\RuntimeException $e) {
             return $this->json(['success' => false, 'error' => $e->getMessage()], $e->getCode());
         }
+    }
+
+    #[Route('/{code}/my-role', name: 'api_game_my_role', methods: ['GET'])]
+    public function getMyRole(string $code, Request $request): JsonResponse
+    {
+        $userId = $request->query->get('userId');
+        if (!$userId) {
+            return $this->json(['success' => true, 'role' => 'player']);
+        }
+
+        $game = $this->gameRepository->findOneBy(['code' => $code]);
+        if (!$game) {
+            return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+        }
+
+        $identifier = $game->getCode() ?? $game->getId()->toString();
+        $proAiId = $this->gameRedisService->getRedis()->get("game:{$identifier}:proai");
+
+        $role = ($proAiId !== null && $proAiId === $userId) ? 'proai' : 'player';
+        return $this->json(['success' => true, 'role' => $role]);
     }
 
     #[Route('/{code}/status', name: 'api_game_status', methods: ['GET'])]
@@ -265,32 +323,96 @@ class GameController extends AbstractController
         }
     }
 
-    #[Route('/{code}/check-victory', name: 'api_game_check_victory', methods: ['POST'])]
-    #[OA\Post(
-        path: '/api/game/{code}/check-victory',
-        summary: 'Vérifier les conditions de victoire',
-        tags: ['Game']
-    )]
-    #[OA\Parameter(
-        name: 'code',
-        in: 'path',
-        required: true,
-        description: 'Code de la partie',
-        schema: new OA\Schema(type: 'string', example: 'ABC123')
-    )]
-    #[OA\Response(
-        response: 200,
-        description: 'Vérification effectuée',
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'gameOver', type: 'boolean', example: false),
-                new OA\Property(property: 'winner', type: 'string', nullable: true)
+    #[Route('/{code}/state', name: 'api_game_state', methods: ['GET'])]
+    public function getGameState(string $code): JsonResponse
+    {
+        $game = $this->gameRepository->findOneBy(['code' => $code]);
+        if (!$game) {
+            return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+        }
+
+        $redis = $this->gameRedisService->getRedis();
+        $identifier = $game->getCode() ?? $game->getId()->toString();
+
+        // Players depuis Redis (contient isAlive, isAI, nickname)
+        $playersRaw = $redis->hgetall("game:{$identifier}:players") ?: [];
+        $players = [];
+        foreach ($playersRaw as $playerId => $playerJson) {
+            $p = json_decode($playerJson, true);
+            $isAlive = $p['isAlive'] ?? true;
+            $players[] = [
+                'id'       => $playerId,
+                'nickname' => $p['nickname'] ?? 'Joueur',
+                'isAlive'  => $isAlive,
+                'isAI'     => $isAlive ? false : ($p['isAI'] ?? false), // révélé seulement après élimination
+            ];
+        }
+
+        // Round depuis Redis
+        $roundRaw = $redis->hgetall("game:{$identifier}:round") ?: [];
+        $roundData = null;
+
+        if (!empty($roundRaw) && !empty($roundRaw['roundId'])) {
+            $status   = $roundRaw['status'] ?? null;
+            $answers  = null;
+            $revoteCandidates = null;
+            $eliminatedPlayerId = null;
+
+            // Réponses visibles en phase vote et après
+            if (in_array($status, ['en_attente_votes', 'termine'])) {
+                $responsesRaw = $redis->hgetall("game:{$identifier}:round:reponses") ?: [];
+                $answers = [];
+                foreach ($responsesRaw as $pid => $rJson) {
+                    $r = json_decode($rJson, true);
+                    $answers[] = ['playerId' => $pid, 'text' => $r['reponse'] ?? ''];
+                }
+                // Tri cohérent pour que le front puisse shuffler une seule fois
+                usort($answers, fn($a, $b) => strcmp($a['playerId'], $b['playerId']));
+            }
+
+            // Candidats au revote
+            $revoteRaw = $redis->get("game:{$identifier}:round:revote");
+            if ($revoteRaw) {
+                $revoteCandidates = json_decode($revoteRaw, true);
+            }
+
+            // Joueur éliminé (depuis la DB après appel /eliminate)
+            $roundEntity = $this->roundRepository->find($roundRaw['roundId']);
+            if ($roundEntity && $roundEntity->getEliminatedPlayer()) {
+                $eliminatedPlayerId = $roundEntity->getEliminatedPlayer()->getId()->toString();
+            }
+
+            $aliveCount = count(array_filter($players, fn($p) => $p['isAlive']));
+
+            $roundData = [
+                'id'                => $roundRaw['roundId'],
+                'number'            => (int)($roundRaw['roundNumber'] ?? 1),
+                'status'            => $status,
+                'question'          => $roundRaw['question'] ?? null,
+                'questionMasterId'  => $roundRaw['questionAskedBy'] ?? null,
+                'answeredCount'     => (int)$redis->hlen("game:{$identifier}:round:reponses"),
+                'votedCount'        => (int)$redis->hlen("game:{$identifier}:round:votes"),
+                'totalAlive'        => $aliveCount,
+                'answers'           => $answers,
+                'revoteCandidates'  => $revoteCandidates,
+                'eliminatedPlayerId'=> $eliminatedPlayerId,
+            ];
+        }
+
+        return $this->json([
+            'success' => true,
+            'game' => [
+                'id'      => $game->getId()->toString(),
+                'code'    => $game->getCode(),
+                'status'  => $game->getStatus()->value,
+                'winner'  => $game->getWinnerType()?->value,
+                'players' => $players,
+                'round'   => $roundData,
             ]
-        )
-    )]
-    #[OA\Response(response: 404, description: 'Partie introuvable')]
-    #[OA\Response(response: 500, description: 'Erreur serveur')]
+        ]);
+    }
+
+    #[Route('/{code}/check-victory', name: 'api_game_check_victory', methods: ['POST'])]
     public function checkVictory(string $code): JsonResponse {
         try {
             $game = $this->gameRepository->findOneBy(['code' => $code]);
