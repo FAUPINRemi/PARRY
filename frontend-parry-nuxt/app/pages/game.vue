@@ -61,16 +61,19 @@ async function startGame() {
   if (!isCreator.value) return
   gameStatus.value = 'starting'
   startCountdown.value = 3
-  // Timer de 3 secondes avant le début
   const interval = setInterval(() => {
     startCountdown.value--
     if (startCountdown.value <= 0) {
       clearInterval(interval)
       gameStatus.value = 'started'
-      // Ici, tu pourrais appeler une API pour notifier le backend
-      step.value = 'question'
+      // step reste 'question', le watch(gameStatus) s'en charge
     }
   }, 1000)
+}
+
+async function submitPlayerQuestion() {
+  if (!question.value.trim()) return
+  step.value = 'reponse'
 }
 
 onMounted(() => {
@@ -79,37 +82,34 @@ onMounted(() => {
 	fetchPlayersAndCreator()
 })
 
-// Surveille le step pour automatiser la génération de question
-watch(step, async (newStep) => {
-	if (newStep === 'question') {
-		// Choix aléatoire du question master (IA ou joueur)
-		await fetchPlayers()
-		let allIds = players.value.map(p => p.id)
-		// Ajoute l'IA comme possible question master (id: 'AI')
-		allIds.push('AI')
-		const randomId = allIds[Math.floor(Math.random() * allIds.length)]
-		questionMasterId.value = randomId
-		isMyTurnToAsk.value = (randomId === myUserId.value)
-		if (randomId === 'AI') {
-			await fetchQuestion()
-		} else if (isMyTurnToAsk.value) {
-			// Affiche un champ pour que le joueur pose la question (à faire dans le template)
-			question.value = ''
-		} else {
-			questionLoading.value = true
-			questionError.value = null
-			// Attend que le question master pose la question (polling simplifié)
-			let tries = 0
-			while (!question.value && tries < 30 && step.value === 'question') {
-				await new Promise(r => setTimeout(r, 1000))
-				await fetchPlayers()
-				// Ici, il faudrait idéalement une API pour récupérer la question posée
-				// Pour l'instant, on suppose qu'elle sera mise à jour côté backend
-				tries++
-			}
-			questionLoading.value = false
-		}
-	}
+async function startQuestionPhase() {
+  await fetchPlayers()
+  let allIds = players.value.map((p: any) => p.id)
+  allIds.push('AI')
+  const randomId = allIds[Math.floor(Math.random() * allIds.length)]
+  questionMasterId.value = randomId
+  isMyTurnToAsk.value = (randomId === myUserId.value)
+  question.value = ''
+  questionError.value = null
+
+  if (randomId === 'AI') {
+    await fetchQuestion()
+  }
+  // Si c'est un joueur (moi ou un autre), le template affiche le champ ou l'attente
+}
+
+// Démarre la phase de question quand la partie est lancée
+watch(gameStatus, async (newStatus) => {
+  if (newStatus === 'started') {
+    await startQuestionPhase()
+  }
+})
+
+// Sur les rounds suivants (après le 1er), on repasse en 'question' depuis 'result'
+watch(step, async (newStep, oldStep) => {
+  if (newStep === 'question' && oldStep !== undefined && gameStatus.value === 'started') {
+    await startQuestionPhase()
+  }
 })
 
 // Charger la liste des joueurs de la partie (anonymisée)
@@ -339,42 +339,46 @@ const canVote = computed(() => step.value === 'vote' && !voteLoading && myUserId
 			<div class="leftCol">
 				<h1 class="homepage--title">Partie en cours</h1>
 
-				<div v-if="step === 'question'">
-					<h2>Étape 1 : Question</h2>
-					<div v-if="questionLoading">Chargement de la question...</div>
-					<div v-if="questionError" style="color: red">{{ questionError }}</div>
-					<template v-if="question">
-						<div>
-							Question : <b>{{ question }}</b>
-							<button @click="goToResponse">Répondre</button>
-						</div>
-					</template>
-					<template v-else>
-						<div v-if="isMyTurnToAsk">
+				<template v-if="gameStatus === 'waiting' || gameStatus === 'starting'">
+					<p style="color: #aaa;">La partie n'a pas encore commencé.</p>
+				</template>
+
+				<template v-else-if="gameStatus === 'started'">
+					<div v-if="step === 'question'">
+						<h2>Étape 1 : Question</h2>
+						<div v-if="questionLoading">Chargement de la question...</div>
+						<div v-if="questionError" style="color: red">{{ questionError }}</div>
+						<template v-if="question">
+							<div>Question : <b>{{ question }}</b></div>
+						</template>
+						<template v-else-if="isMyTurnToAsk && !questionLoading">
 							<input v-model="question" type="text" placeholder="Écris ta question..." class="terminal-input" @keyup.enter="submitPlayerQuestion" />
 							<button class="gButton important" @click="submitPlayerQuestion" :disabled="!question">Envoyer la question</button>
-						</div>
-					</template>
-				</div>
-
-				<div v-else-if="step === 'result'">
-					<h2>Résultat du round</h2>
-					<div v-if="result">
-						<div v-if="result.eliminated">
-							Joueur éliminé : Joueur {{ getPlayerNumberById(result.eliminated) }}
-						</div>
-						<div v-else>Aucun joueur éliminé ce round.</div>
-						<div v-if="result.votes">
-							<h3>Votes :</h3>
-							<ul>
-								<li v-for="(vote, idx) in result.votes" :key="idx">
-									Joueur {{ getPlayerNumberById(vote.target) }} a reçu {{ vote.count }} vote(s)
-								</li>
-							</ul>
-						</div>
+						</template>
+						<template v-else-if="!questionLoading">
+							<p style="color: #aaa;">En attente de la question du question master…</p>
+						</template>
 					</div>
-					<button class="gButton" @click="nextRound">Round suivant</button>
-				</div>
+
+					<div v-else-if="step === 'result'">
+						<h2>Résultat du round</h2>
+						<div v-if="result">
+							<div v-if="result.eliminated">
+								Joueur éliminé : Joueur {{ getPlayerNumberById(result.eliminated) }}
+							</div>
+							<div v-else>Aucun joueur éliminé ce round.</div>
+							<div v-if="result.votes">
+								<h3>Votes :</h3>
+								<ul>
+									<li v-for="(vote, idx) in result.votes" :key="idx">
+										Joueur {{ getPlayerNumberById(vote.target) }} a reçu {{ vote.count }} vote(s)
+									</li>
+								</ul>
+							</div>
+						</div>
+						<button class="gButton" @click="nextRound">Round suivant</button>
+					</div>
+				</template>
 			</div>
 			<div class="rightCol">
         <section class="panel hub-panel">
@@ -406,7 +410,7 @@ const canVote = computed(() => step.value === 'vote' && !voteLoading && myUserId
 		</div>
 
 		<!-- Terminal dynamique en bas de page -->
-		<div class="game-terminal">
+		<div class="game-terminal" v-if="gameStatus === 'started'">
 			<template v-if="step === 'reponse'">
 				<div>Question : <b>{{ question }}</b></div>
 				<div style="color: #4caf50; margin-bottom: 0.5rem;">Temps restant : {{ responseTimer }}s</div>
