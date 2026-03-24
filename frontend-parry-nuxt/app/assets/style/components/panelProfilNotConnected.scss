@@ -4,27 +4,140 @@
 @use "./../util/font-sizes";
 
 .panelProfilNotConnected {
-  display: flex;
-  flex-direction: column;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: spacing.$s9;
+	width: 100%;
+	max-width: 350px;
+	margin: 0 auto;
 
-  align-items: center;
+	@include respond-to(xs) {
+		max-width: 100vw;
+		gap: spacing.$s3;
+		padding: spacing.$s2;
+	}
 
-  gap: spacing.$s9;
+	p {
+		text-align: center;
 
-  width: 100%;
-  max-width: 350px;
-  margin: 0 auto;
+		@include respond-to(xs) {
+			font-size: font-sizes.$f0;
+		}
+	}
 
-  @include respond-to(xs) {
-    max-width: 100vw;
-    gap: spacing.$s3;
-    padding: spacing.$s2;
-  }
+	// --- SCSS "de base" qui était dans le fichier .vue ---
+	.profil-message {
+		text-align: center;
+		font-size: 1.1rem;
+		margin-bottom: 1rem;
+	}
 
-  p {
-    text-align: center;
-    @include respond-to(xs) {
-      font-size: font-sizes.$f0;
-    }
-  }
+	.profil-form {
+		display: flex;
+		flex-direction: column;
+		gap: 1.2rem;
+		width: 100%;
+	}
+
+	.profil-field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+
+	.profil-btn {
+		width: 100%;
+		margin-top: 0.5rem;
+	}
+
+	.profil-switch {
+		width: 100%;
+		margin-top: 0.5rem;
+		background: none;
+		border: 1px solid #444;
+		color: #fff;
+	}
+
+	.profil-error {
+		color: #ff4d4f;
+		font-size: 0.95rem;
+		text-align: center;
+	}
+
+	.profil-success {
+		color: #4caf50;
+		font-size: 0.95rem;
+		text-align: center;
+	}
+
+	.profil-connected-email {
+		font-size: 0.85rem;
+		color: #aaa;
+		text-align: center;
+		word-break: break-all;
+	}
+
+	.profil-game-info {
+		width: 100%;
+		border-top: 1px solid #333;
+		padding-top: 0.8rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		font-size: 0.85rem;
+
+		&--row {
+			display: flex;
+			justify-content: space-between;
+			color: #aaa;
+
+			strong {
+				color: #fff;
+			}
+		}
+
+		&--players {
+			margin-top: 0.5rem;
+			padding-top: 0.5rem;
+			border-top: 1px solid #222;
+		}
+
+		&--players-label {
+			color: #aaa;
+			margin-bottom: 0.3rem;
+		}
+
+		ul {
+			list-style: none;
+			padding: 0;
+			margin: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 0.25rem;
+		}
+
+		li {
+			display: flex;
+			align-items: center;
+			gap: 0.3rem;
+		}
+
+		li.player--dead {
+			opacity: 0.4;
+			text-decoration: line-through;
+		}
+	}
+
+	.tag-me {
+		color: #aaa;
+		font-size: 0.7rem;
+	}
+
+	.tag-ai {
+		background: #f44336;
+		color: #fff;
+		font-size: 0.65rem;
+		padding: 0 0.25rem;
+	}
 }
