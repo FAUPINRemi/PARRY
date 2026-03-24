@@ -28,17 +28,18 @@ async function createGame() {
 				'Content-Type': 'application/json',
 				...(jwt ? { Authorization: `Bearer ${jwt}` } : {})
 			},
-			body: JSON.stringify({ isPrivate: false })
+			body: JSON.stringify({ isPrivate: true })
 		})
 
 		const data = await res.json()
 
 		if (data.success) {
 			gameInfo.value = data.game
-			emitEvent({ message: 'Salon créé !', type: 'success' })
-
-			if (data.game && (data.game.code || data.game.id)) {
-				router.push({ path: '/game', query: { code: data.game.code || data.game.id } })
+			const code = data.game.code || data.game.id
+			if (code) {
+				emitEvent({ message: `Salon créé ! Code : ${code}`, type: 'success' })
+				localStorage.setItem(`parry_creator_${code}`, '1')
+				router.push({ path: '/game', query: { code } })
 			}
 		} else {
 			error.value = data.error || 'Erreur inconnue'
@@ -58,7 +59,6 @@ async function joinGame() {
 	joinSuccess.value = false
 
 	try {
-		const userId = (process.client ? localStorage.getItem('userId') : null) || 'demo-user-id'
 		const jwt = process.client ? localStorage.getItem('jwt') : null
 
 		const res = await apiFetch(`/api/game/${joinCode.value}/join`, {
@@ -67,7 +67,7 @@ async function joinGame() {
 				'Content-Type': 'application/json',
 				...(jwt ? { Authorization: `Bearer ${jwt}` } : {})
 			},
-			body: JSON.stringify({ userId })
+			body: JSON.stringify({})
 		})
 
 		const data = await res.json()
