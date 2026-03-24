@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
 const { emitEvent } = useTerminal()
 const { apiFetch } = useApi()
@@ -12,10 +12,33 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const success = ref(false)
 const token = ref<string | null>(null)
+const connectedEmail = ref<string | null>(null)
+
+const isLoggedIn = computed(() => !!token.value)
 
 onMounted(() => {
-	emitEvent({ message: 'Pas d’utilisateur connecté.', type: 'info' })
+	const savedToken = localStorage.getItem('jwt')
+	if (savedToken) {
+		token.value = savedToken
+		try {
+			const payload = JSON.parse(atob(savedToken.split('.')[1]))
+			connectedEmail.value = payload?.username || null
+		} catch {}
+	} else {
+		emitEvent({ message: 'Pas d\'utilisateur connecté.', type: 'info' })
+	}
 })
+
+function logout() {
+	localStorage.removeItem('jwt')
+	localStorage.removeItem('userId')
+	token.value = null
+	connectedEmail.value = null
+	email.value = ''
+	password.value = ''
+	error.value = null
+	emitEvent({ message: 'Déconnexion réussie.', type: 'info' })
+}
 
 async function login() {
 	loading.value = true
@@ -86,6 +109,19 @@ async function register() {
 
 <template>
 	<div class="panelProfilNotConnected">
+
+		<!-- État connecté -->
+		<template v-if="isLoggedIn">
+			<p class="profil-message profil-success">Connecté !</p>
+			<p v-if="connectedEmail" class="profil-connected-email">{{ connectedEmail }}</p>
+			<button class="gButton important profil-btn" @click="logout">
+				<NuxtIcon name="pixelarticons:logout" />
+				Se déconnecter
+			</button>
+		</template>
+
+		<!-- État déconnecté -->
+		<template v-else>
 		<p v-if="showLogin" class="profil-message">Vous n'êtes pas connecté.</p>
 
 		<form v-if="showLogin" class="profil-form" @submit.prevent="login">
@@ -101,7 +137,6 @@ async function register() {
 				<NuxtIcon name="pixelarticons:login" />
 				{{ loading ? 'Connexion...' : 'Se connecter' }}
 			</button>
-			<div v-if="token" class="profil-success">Connecté !</div>
 			<div v-if="error" class="profil-error">{{ error }}</div>
 			<button type="button" class="gButton profil-switch" @click="showLogin = false">
 				<NuxtIcon name="pixelarticons:user-plus" />
@@ -133,6 +168,7 @@ async function register() {
 				Se connecter
 			</button>
 		</form>
+		</template>
 	</div>
 </template>
 
@@ -191,5 +227,12 @@ async function register() {
 	color: #4caf50;
 	font-size: 0.95rem;
 	text-align: center;
+}
+
+.profil-connected-email {
+	font-size: 0.85rem;
+	color: #aaa;
+	text-align: center;
+	word-break: break-all;
 }
 </style>

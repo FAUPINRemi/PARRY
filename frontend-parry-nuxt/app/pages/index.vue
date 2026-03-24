@@ -117,12 +117,12 @@ o888o        o88o     o8888o o888o  o888o o888o  o888o     o888o
 
 						<div v-if="gameInfo" style="margin-top: 1em">
 							<div><b>Salon créé !</b></div>
-							<div v-if="gameInfo.code">Code : <b> gameInfo.code </b></div>
-							<div v-else>ID : <b> gameInfo.id </b></div>
-							<div>Status :  gameInfo.status </div>
+							<div v-if="gameInfo.code">Code : <b>{{ gameInfo.code }}</b></div>
+							<div v-else>ID : <b>{{ gameInfo.id }}</b></div>
+							<div>Status : {{ gameInfo.status }}</div>
 						</div>
 
-						<div v-if="error" style="color: red"> error </div>
+						<div v-if="error" style="color: red">{{ error }}</div>
 					</div>
 
 					<form class="card" @submit.prevent="joinGame">
@@ -139,7 +139,7 @@ o888o        o88o     o8888o o888o  o888o o888o  o888o     o888o
 						</div>
 
 						<div v-if="joinSuccess" style="color: green">Salon rejoint !</div>
-						<div v-if="joinError" style="color: red"> joinError </div>
+						<div v-if="joinError" style="color: red">{{ joinError }}</div>
 					</form>
 				</div>
 			</div>
@@ -208,6 +208,12 @@ o888o        o88o     o8888o o888o  o888o o888o  o888o     o888o
 }
 
 
+
+.cardsRow {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 1rem;
+}
 
 @media (min-width: 900px) {
 	.cardsRow {
