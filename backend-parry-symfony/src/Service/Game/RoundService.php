@@ -250,7 +250,7 @@ class RoundService
         $joueurMaxVotes = array_keys(array_filter($countVotes, fn($votes) => $votes === $maxVotes));
 
         if (count($joueurMaxVotes) > 1) {
-            $this->gameRedisService->getRedis()->set("game:{$gameIdentifier}:round:revote", json_encode($joueurMaxVotes), ['ex' => 3600]);
+            $this->gameRedisService->getRedis()->setex("game:{$gameIdentifier}:round:revote", 3600, json_encode($joueurMaxVotes));
             $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'status', 'en_attente_votes');
             $this->gameRedisService->getRedis()->del("game:{$gameIdentifier}:round:votes");
             return null;

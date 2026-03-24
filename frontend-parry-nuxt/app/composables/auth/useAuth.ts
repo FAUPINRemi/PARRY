@@ -1,15 +1,22 @@
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 
 export function useAuth() {
 	const { emitEvent } = useTerminal()
 	const { apiFetch } = useApi()
 
-	const loading = ref(false)
-	const error = ref<string | null>(null)
-	const success = ref(false)
+	// useState → état partagé entre tous les composants (singleton Nuxt)
+	const connectedPseudo = useState<string | null>('auth:pseudo', () => null)
+	const loading = useState<boolean>('auth:loading', () => false)
+	const error = useState<string | null>('auth:error', () => null)
+	const success = useState<boolean>('auth:success', () => false)
 
-	const connectedEmail = ref<string | null>(null)
-	const isLoggedIn = computed(() => !!connectedEmail.value)
+	const isLoggedIn = computed(() => !!connectedPseudo.value)
+
+	function initFromStorage() {
+		if (!process.client) return
+		const pseudo = localStorage.getItem('userPseudo')
+		if (pseudo) connectedPseudo.value = pseudo
+	}
 
 	async function login(params: { username: string; password: string }) {
 		loading.value = true
@@ -25,7 +32,11 @@ export function useAuth() {
 			const data = await res.json().catch(() => ({}))
 
 			if (res.ok && data.success) {
-				connectedEmail.value = params.username // fallback simple
+				connectedPseudo.value = data.user?.pseudo ?? data.user?.username ?? params.username
+				if (process.client) {
+					localStorage.setItem('userPseudo', connectedPseudo.value!)
+					if (data.user?.id) localStorage.setItem('userId', data.user.id)
+				}
 				emitEvent({ message: 'Connexion réussie !', type: 'success' })
 			} else {
 				error.value = data.message || 'Identifiants invalides'
@@ -74,7 +85,11 @@ export function useAuth() {
 		try {
 			const res = await apiFetch('/api/logout', { method: 'POST' })
 			if (res.ok) {
-				connectedEmail.value = null
+				connectedPseudo.value = null
+				if (process.client) {
+					localStorage.removeItem('userPseudo')
+					localStorage.removeItem('userId')
+				}
 				emitEvent({ message: 'Déconnexion réussie.', type: 'info' })
 			} else {
 				error.value = 'Erreur logout'
@@ -92,8 +107,9 @@ export function useAuth() {
 		loading,
 		error,
 		success,
-		connectedEmail,
+		connectedPseudo,
 		isLoggedIn,
+		initFromStorage,
 		login,
 		register,
 		logout,

@@ -1,4 +1,9 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { useAuth } from '@/composables/auth/useAuth'
+const { initFromStorage } = useAuth()
+onMounted(() => initFromStorage())
+</script>
 
 <template>
   <NuxtLayout>

@@ -11,9 +11,7 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 const joinCode = ref('')
-const joinLoading = ref(false)
 const joinError = ref<string | null>(null)
-const joinSuccess = ref(false)
 
 async function createGame() {
 	loading.value = true
@@ -54,41 +52,8 @@ async function createGame() {
 }
 
 async function joinGame() {
-	joinLoading.value = true
-	joinError.value = null
-	joinSuccess.value = false
-
-	try {
-		const jwt = process.client ? localStorage.getItem('jwt') : null
-
-		const res = await apiFetch(`/api/game/${joinCode.value}/join`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				...(jwt ? { Authorization: `Bearer ${jwt}` } : {})
-			},
-			body: JSON.stringify({})
-		})
-
-		const data = await res.json()
-
-		if (res.ok && data.success) {
-			joinSuccess.value = true
-			emitEvent({ message: 'Salon rejoint !', type: 'success' })
-
-			if (joinCode.value) {
-				router.push({ path: '/game', query: { code: joinCode.value } })
-			}
-		} else {
-			joinError.value = data.error || 'Erreur lors de la jonction'
-			emitEvent({ message: joinError.value, type: 'error' })
-		}
-	} catch {
-		joinError.value = 'Erreur réseau'
-		emitEvent({ message: joinError.value, type: 'error' })
-	} finally {
-		joinLoading.value = false
-	}
+	if (!joinCode.value) return
+	router.push({ path: '/game', query: { code: joinCode.value } })
 }
 </script>
 
@@ -132,13 +97,12 @@ o888o        o88o     o8888o o888o  o888o o888o  o888o     o888o
 
 						<div class="joinRow">
 							<input v-model="joinCode" type="text" placeholder="ABC123" required />
-							<button class="gButton important" :disabled="joinLoading">
+							<button class="gButton important">
 								<Icon name="pixelarticons:search" />
-								 {{joinLoading ? 'Recherche...' : 'Rejoindre' }} 
+							Rejoindre
 							</button>
 						</div>
 
-						<div v-if="joinSuccess" style="color: green">Salon rejoint !</div>
 						<div v-if="joinError" style="color: red">{{ joinError }}</div>
 					</form>
 				</div>

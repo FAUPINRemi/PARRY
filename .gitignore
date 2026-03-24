@@ -12,6 +12,9 @@ backend-parry-symfony/var/
 backend-parry-symfony/vendor/
 backend-parry-symfony/composer.lock
 
+# Claude
+CLAUDE.md
+
 # IDE
 .idea/
 .vscode/

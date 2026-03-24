@@ -29,15 +29,21 @@
   border-bottom: 1px solid #333;
   font-size: 0.85rem;
 
-  &--alive { color: #4caf50; }
-  &--dead  { color: #f44336; }
-  &--round { color: #aaa; margin-left: auto; }
+  &--alive { color: #4caf50; font-weight: bold; }
+  &--dead  { color: #f44336; font-weight: bold; }
+  &--round {
+    color: #fff;
+    margin-left: auto;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+  }
 }
 
 /* --- */
 .game-screen-title {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   margin: 0 0 1rem 0;
+  letter-spacing: 0.03em;
 }
 
 .game-code-display {
@@ -121,27 +127,88 @@
   }
 }
 
-/* --- */
-.answers-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-  margin: 0.8rem 0;
+/* --- vote phase --- */
+.vote-instruction {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.8rem;
 }
 
-.answer-card {
+.vote-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 1rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.vote-card {
+  background: #111;
   border: 1px solid #333;
-  padding: 0.8rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
   min-width: 0;
   overflow: hidden;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: default;
 
-  &--voted { opacity: 0.7; }
-  &--label { color: #aaa; font-size: 0.8rem; }
-  &--text  { font-size: 1rem; word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap; }
-  &--vote-btn { align-self: flex-start; }
+  &:hover:not(.vote-card--voted):not(.vote-card--mine) {
+    border-color: #666;
+    background: #161616;
+  }
+
+  &--mine {
+    background: #0a0a0a;
+    border-color: #333;
+    opacity: 0.45;
+  }
+
+  &--voted { pointer-events: none; opacity: 0.6; }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0.75rem;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+  }
+
+  &__num {
+    font-size: 0.7rem;
+    color: #888;
+    letter-spacing: 0.12em;
+    font-weight: bold;
+  }
+
+  &__tag {
+    font-size: 0.7rem;
+    color: #666;
+    font-style: italic;
+  }
+
+  &__text {
+    padding: 0.85rem 0.75rem;
+    font-size: 0.95rem;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    flex: 1;
+    line-height: 1.5;
+    color: #e0e0e0;
+  }
+
+  &__footer {
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid #222;
+    min-height: 2.4rem;
+    display: flex;
+    align-items: center;
+  }
+
+  &__btn {
+    width: 100%;
+    font-size: 0.8rem;
+  }
 }
 
 .revote-badge {

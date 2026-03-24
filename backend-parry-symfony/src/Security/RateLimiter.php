@@ -7,8 +7,8 @@ use Symfony\Contracts\Cache\ItemInterface;
 
 class RateLimiter
 {
-    private const MAX_REQUESTS_PER_SECOND = 15;
-    private const MAX_REQUESTS_PER_MINUTE = 300;
+    private const MAX_REQUESTS_PER_SECOND = 60;
+    private const MAX_REQUESTS_PER_MINUTE = 600;
     private const MAX_REQUESTS_PER_HOUR = 5000;
     private const BLOCK_DURATION = 300; // 5 minutes en secondes
     

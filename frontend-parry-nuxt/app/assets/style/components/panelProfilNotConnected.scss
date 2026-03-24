@@ -1,143 +1,146 @@
 @use "../util/media-queries" as *;
-@use "./../util/colors";
 @use "./../util/spacing";
 @use "./../util/font-sizes";
 
+/* ---- Etat connecté ---- */
+.panelProfil--connected {
+	display: flex;
+	flex-direction: column;
+	gap: 0.9rem;
+	width: 100%;
+}
+
+.profil-connected-email {
+	font-size: 1rem;
+	color: #fff;
+	letter-spacing: 0.04em;
+}
+
+.profil-btn {
+	width: 100%;
+}
+
+.profil-game-info {
+	border-top: 1px solid #2a2a2a;
+	padding-top: 0.8rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	font-size: 0.82rem;
+
+	&--row {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		color: #555;
+
+		strong { color: #ccc; }
+	}
+
+	&--players {
+		margin-top: 0.6rem;
+		padding-top: 0.6rem;
+		border-top: 1px solid #1e1e1e;
+	}
+
+	&--players-label {
+		color: #444;
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		margin-bottom: 0.4rem;
+	}
+
+	ul {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+
+	li {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.85rem;
+		color: #ddd;
+		transition: color 0.1s;
+	}
+
+	li.player--dead {
+		color: #f44336;
+		opacity: 0.5;
+		text-decoration: line-through;
+		text-decoration-color: #f44336aa;
+	}
+}
+
+.tag-me {
+	color: #4caf50;
+	font-size: 0.7rem;
+	opacity: 0.9;
+}
+
+.tag-ai {
+	color: #f44336;
+	font-size: 0.7rem;
+	border: 1px solid #f4433655;
+	padding: 0 0.25rem;
+}
+
+/* ---- Etat non connecté ---- */
 .panelProfilNotConnected {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
-	gap: spacing.$s9;
+	gap: 0.9rem;
 	width: 100%;
-	max-width: 350px;
+	max-width: 320px;
 	margin: 0 auto;
 
 	@include respond-to(xs) {
 		max-width: 100vw;
-		gap: spacing.$s3;
 		padding: spacing.$s2;
 	}
+}
 
-	p {
-		text-align: center;
+.profil-message {
+	font-size: 0.9rem;
+	color: #555;
+}
 
-		@include respond-to(xs) {
-			font-size: font-sizes.$f0;
-		}
-	}
+.profil-form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.9rem;
+	width: 100%;
+}
 
-	// --- SCSS "de base" qui était dans le fichier .vue ---
-	.profil-message {
-		text-align: center;
-		font-size: 1.1rem;
-		margin-bottom: 1rem;
-	}
+.profil-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
 
-	.profil-form {
-		display: flex;
-		flex-direction: column;
-		gap: 1.2rem;
-		width: 100%;
-	}
+	label { font-size: 0.8rem; color: #666; }
+}
 
-	.profil-field {
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-	}
+.profil-switch {
+	width: 100%;
+	background: none;
+	border: 1px solid #2a2a2a;
+	color: #555;
+	font-size: 0.85rem;
 
-	.profil-btn {
-		width: 100%;
-		margin-top: 0.5rem;
-	}
+	&:hover { border-color: #444; color: #aaa; }
+}
 
-	.profil-switch {
-		width: 100%;
-		margin-top: 0.5rem;
-		background: none;
-		border: 1px solid #444;
-		color: #fff;
-	}
+.profil-error {
+	color: #f44336;
+	font-size: 0.85rem;
+}
 
-	.profil-error {
-		color: #ff4d4f;
-		font-size: 0.95rem;
-		text-align: center;
-	}
-
-	.profil-success {
-		color: #4caf50;
-		font-size: 0.95rem;
-		text-align: center;
-	}
-
-	.profil-connected-email {
-		font-size: 0.85rem;
-		color: #aaa;
-		text-align: center;
-		word-break: break-all;
-	}
-
-	.profil-game-info {
-		width: 100%;
-		border-top: 1px solid #333;
-		padding-top: 0.8rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		font-size: 0.85rem;
-
-		&--row {
-			display: flex;
-			justify-content: space-between;
-			color: #aaa;
-
-			strong {
-				color: #fff;
-			}
-		}
-
-		&--players {
-			margin-top: 0.5rem;
-			padding-top: 0.5rem;
-			border-top: 1px solid #222;
-		}
-
-		&--players-label {
-			color: #aaa;
-			margin-bottom: 0.3rem;
-		}
-
-		ul {
-			list-style: none;
-			padding: 0;
-			margin: 0;
-			display: flex;
-			flex-direction: column;
-			gap: 0.25rem;
-		}
-
-		li {
-			display: flex;
-			align-items: center;
-			gap: 0.3rem;
-		}
-
-		li.player--dead {
-			opacity: 0.4;
-			text-decoration: line-through;
-		}
-	}
-
-	.tag-me {
-		color: #aaa;
-		font-size: 0.7rem;
-	}
-
-	.tag-ai {
-		background: #f44336;
-		color: #fff;
-		font-size: 0.65rem;
-		padding: 0 0.25rem;
-	}
+.profil-success {
+	color: #4caf50;
+	font-size: 0.85rem;
 }

@@ -39,6 +39,7 @@ class JwtCookieAuthenticationSuccessHandler implements AuthenticationSuccessHand
             'user' => [
                 'id' => method_exists($user, 'getId') ? $user->getId() : null,
                 'username' => method_exists($user, 'getUserIdentifier') ? $user->getUserIdentifier() : null,
+                'pseudo' => method_exists($user, 'getPseudo') ? $user->getPseudo() : null,
             ],
         ]);
 

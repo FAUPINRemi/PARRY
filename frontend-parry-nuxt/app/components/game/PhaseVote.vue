@@ -30,44 +30,47 @@ const votableAnswers = computed(() => {
 
 <template>
 	<h1 class="game-screen-title">
-		Round  {{ roundNumber }}  — Vote
-		<span v-if="revoteCandidates" class="revote-badge">Revote !</span>
+		Round {{ roundNumber }} — Vote
+		<span v-if="revoteCandidates" class="revote-badge">Revote</span>
 	</h1>
 
 	<div class="question-display">
-		<p class="question-display--label">Question :</p>
-		<p class="question-display--text"> {{ question }} </p>
+		<p class="question-display--label">Question</p>
+		<p class="question-display--text">{{ question }}</p>
 	</div>
 
-	<p class="phase-hint">
-		Votez pour la réponse qui vous semble la plus suspecte (IA).
+	<p class="vote-instruction">
+		<span v-if="amIAlive && !hasVoted">Quelle réponse vous semble la plus suspecte ?</span>
+		<span v-else-if="hasVoted">Vote enregistré — {{ votedCount }} / {{ totalAlive }}</span>
+		<span v-else>Partie en observation — {{ votedCount }} / {{ totalAlive }}</span>
 	</p>
 
-	<div class="answers-grid">
+	<div class="vote-grid">
 		<div
 			v-for="(ans, idx) in votableAnswers"
 			:key="ans.playerId"
-			class="answer-card"
-			:class="{ 'answer-card--voted': hasVoted }"
+			class="vote-card"
+			:class="{
+				'vote-card--mine':  ans.playerId === myUserId,
+				'vote-card--voted': hasVoted,
+			}"
 		>
-			<p class="answer-card--label">Réponse  {{ idx + 1 }} </p>
-			<p class="answer-card--text"> {{ ans.text }} </p>
+			<div class="vote-card__header">
+				<span class="vote-card__num">{{ String(idx + 1).padStart(2, '0') }}</span>
+				<span v-if="ans.playerId === myUserId" class="vote-card__tag">&gt; vous</span>
+			</div>
 
-			<template v-if="amIAlive">
+			<p class="vote-card__text">{{ ans.text }}</p>
+
+			<div class="vote-card__footer">
 				<button
-					v-if="!hasVoted && ans.playerId !== myUserId"
-					class="gButton important answer-card--vote-btn"
+					v-if="amIAlive && !hasVoted && ans.playerId !== myUserId"
+					class="gButton important vote-card__btn"
 					@click="emit('vote', ans.playerId)"
 				>
-					Voter cette réponse
+					Voter
 				</button>
-
-				<p v-else-if="ans.playerId === myUserId" class="phase-hint">(votre réponse)</p>
-			</template>
-
-			<p v-else class="phase-hint">Vous êtes éliminé — observation uniquement</p>
+			</div>
 		</div>
 	</div>
-
-	<p class="phase-hint"> {{ votedCount }}  /  {{ totalAlive }}  votes</p>
 </template>

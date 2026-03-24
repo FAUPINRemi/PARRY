@@ -15,11 +15,22 @@ class RateLimitSubscriber implements EventSubscriberInterface
         '/api/doc',        // Swagger UI
         '/api/doc.json',   // Swagger JSON
         '/_profiler',      // Symfony Profiler
+        '/api/ai/',        // Orchestration IA (créateur uniquement)
     ];
 
     // Routes GET exclues du rate limiting (polling légitime)
     private const EXCLUDED_GET_SUFFIXES = [
         '/state',          // Polling d'état de la partie (toutes les 2.5s)
+        '/my-role',        // Récupération du rôle au démarrage de partie
+    ];
+
+    // Suffixes POST exclus : orchestration partie (créateur uniquement, non-spammable)
+    private const EXCLUDED_POST_SUFFIXES = [
+        '/start',          // Démarrage de partie
+        '/create',         // Création de round
+        '/eliminate',      // Élimination d'un joueur
+        '/finish',         // Fin de round
+        '/check-victory',  // Vérification de victoire
     ];
     
     public function __construct(
@@ -52,6 +63,15 @@ class RateLimitSubscriber implements EventSubscriberInterface
         // Exclure les routes GET de polling légitime
         if ($request->getMethod() === 'GET') {
             foreach (self::EXCLUDED_GET_SUFFIXES as $suffix) {
+                if (str_ends_with($path, $suffix)) {
+                    return;
+                }
+            }
+        }
+
+        // Exclure les actions d'orchestration POST (créateur uniquement)
+        if ($request->getMethod() === 'POST') {
+            foreach (self::EXCLUDED_POST_SUFFIXES as $suffix) {
                 if (str_ends_with($path, $suffix)) {
                     return;
                 }
@@ -102,14 +122,27 @@ class RateLimitSubscriber implements EventSubscriberInterface
     
     private function getIdentifier($request): string
     {
-        // Use JWT user identifier if available, so players behind the same NAT IP
-        // each get their own independent rate limit bucket.
+        // Prefer per-user bucketing via JWT (cookie or Authorization header),
+        // so players behind the same NAT IP each get their own rate limit bucket.
+        $token = null;
+
+        // 1) Authorization: Bearer header
         $auth = $request->headers->get('Authorization', '');
         if (str_starts_with($auth, 'Bearer ')) {
             $token = substr($auth, 7);
+        }
+
+        // 2) access_token cookie (httpOnly JWT set by JwtCookieAuthenticationSuccessHandler)
+        if ($token === null) {
+            $token = $request->cookies->get('access_token');
+        }
+
+        if ($token !== null) {
             $parts = explode('.', $token);
             if (count($parts) === 3) {
-                $payload = json_decode(base64_decode(str_pad(strtr($parts[1], '-_', '+/'), strlen($parts[1]) % 4 === 0 ? strlen($parts[1]) : strlen($parts[1]) + 4 - strlen($parts[1]) % 4, '=')), true);
+                $pad = strlen($parts[1]) % 4;
+                $padded = $pad === 0 ? $parts[1] : $parts[1] . str_repeat('=', 4 - $pad);
+                $payload = json_decode(base64_decode(strtr($padded, '-_', '+/')), true);
                 if (isset($payload['username'])) {
                     return 'user_' . $payload['username'];
                 }

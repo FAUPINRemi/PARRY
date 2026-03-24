@@ -1,25 +1,22 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import ProfileConnected from './ProfileConnected.vue'
 import ProfileNotConnected from './ProfileNotConnected.vue'
+import { useAuth } from '@/composables/auth/useAuth'
 
 const { emitEvent } = useTerminal()
+const { isLoggedIn } = useAuth()
 
 const isHidden = ref(false)
 
 function openPanel() {
 	isHidden.value = false
-	emitEvent({
-		message: 'Panneau utilisateur ouvert',
-		type: 'info',
-	})
+	emitEvent({ message: 'Panneau utilisateur ouvert', type: 'info' })
 }
 
 function closePanel() {
 	isHidden.value = true
-	emitEvent({
-		message: 'Panneau utilisateur fermé',
-		type: 'info',
-	})
+	emitEvent({ message: 'Panneau utilisateur fermé', type: 'info' })
 }
 </script>
 
@@ -30,7 +27,8 @@ function closePanel() {
 			Close
 		</button>
 
-		<ProfileNotConnected />
+		<ProfileConnected v-if="isLoggedIn" />
+		<ProfileNotConnected v-else />
 	</Panel>
 
 	<button v-else @click="openPanel" class="gButton profilOpen">

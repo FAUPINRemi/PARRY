@@ -87,6 +87,10 @@ export function useGame() {
 	async function fetchGameState() {
 		try {
 			const res = await apiFetch(`/api/game/${gameCode.value}/state`, { headers: authHeaders() })
+			if (res.status === 401) {
+				if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+				return
+			}
 			if (!res.ok) return
 
 			const data = await res.json()

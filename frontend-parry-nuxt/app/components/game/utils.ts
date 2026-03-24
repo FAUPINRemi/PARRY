@@ -16,7 +16,6 @@ export function playerAlias(
 
 	const p = players.find(p => p.id === playerId)
 	if (p?.isAI) return 'IA'
-	if (playerId === myUserId) return 'Vous'
 
 	const humanIds = players
 		.filter(p => !p.isAI)
