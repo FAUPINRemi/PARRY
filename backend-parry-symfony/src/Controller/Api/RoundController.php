@@ -63,10 +63,9 @@ class RoundController extends AbstractController
     public function createRound(Request $request): JsonResponse {
         $data = json_decode($request->getContent(), true);
         $gameCode = $data['gameCode'] ?? null;
-        $questionMasterId = $data['questionMasterId'] ?? null;
 
-        if (!$gameCode || !$questionMasterId) {
-            return $this->json(['success' => false, 'error' => 'GAME_CODE_ET_QUESTION_MASTER_REQUIS'], 400);
+        if (!$gameCode) {
+            return $this->json(['success' => false, 'error' => 'GAME_CODE_REQUIS'], 400);
         }
 
         try {
@@ -75,12 +74,7 @@ class RoundController extends AbstractController
                 return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
             }
 
-            $questionMaster = $this->userRepository->find($questionMasterId);
-            if (!$questionMaster) {
-                return $this->json(['success' => false, 'error' => 'QUESTION_MASTER_INTROUVABLE'], 404);
-            }
-
-            $round = $this->roundService->createRound($game, $questionMaster);
+            $round = $this->roundService->createRound($game);
 
             return $this->json([
                 'success' => true,

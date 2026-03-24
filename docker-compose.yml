@@ -11,6 +11,7 @@ services:
     environment:
       APP_ENV: ${APP_ENV}
       DATABASE_URL: ${DATABASE_URL}
+      PHP_CLI_SERVER_WORKERS: 8
     ports:
       - "8000:8000"
     volumes:

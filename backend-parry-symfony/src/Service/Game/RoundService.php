@@ -17,10 +17,35 @@ class RoundService
         private readonly GameRedisService $gameRedisService
     ) {}
 
-    public function createRound(Game $game, User $questionMaster): Round {
+    public function createRound(Game $game, ?User $questionMaster = null): Round {
 
         if ($game->getStatus() !== \App\Enum\GameStatus::IN_PROGRESS) {
             throw new \RuntimeException('PARTIE_NON_COMMENCEE', 400);
+        }
+
+        $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
+        $playersRaw = $this->gameRedisService->getRedis()->hgetall("game:{$gameIdentifier}:players") ?: [];
+
+        $aliveIds = [];
+        foreach ($playersRaw as $playerId => $playerJson) {
+            $p = json_decode($playerJson, true);
+            if ($p['isAlive'] ?? true) {
+                $aliveIds[] = $playerId;
+            }
+        }
+
+        if (!empty($aliveIds)) {
+            $randomId = $aliveIds[array_rand($aliveIds)];
+            $picked = $game->getPlayers()->filter(
+                fn(User $u) => $u->getId()->toString() === $randomId
+            )->first();
+            if ($picked) {
+                $questionMaster = $picked;
+            }
+        }
+
+        if (!$questionMaster) {
+            throw new \RuntimeException('AUCUN_JOUEUR_VIVANT', 400);
         }
 
         $round = new Round();
@@ -35,6 +60,7 @@ class RoundService
         $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
         $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'roundId', $round->getId()->toString());
         $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'roundNumber', $round->getRoundNumber());
+        $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'questionAskedBy', $questionMaster->getId()->toString());
         $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'status', 'en_attente_question');
 
         return $round;

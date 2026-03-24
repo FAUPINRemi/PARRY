@@ -17,4 +17,6 @@ echo "Base de donnée ok "
 php bin/console doctrine:migrations:migrate --no-interaction || true
 
 # Démarrer le serveur de développement Symfony sur le port 8000
+# PHP_CLI_SERVER_WORKERS permet plusieurs workers concurrents (PHP >= 7.4)
+export PHP_CLI_SERVER_WORKERS=8
 exec php -S 0.0.0.0:8000 -t public

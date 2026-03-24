@@ -57,6 +57,14 @@ class AIJoueurService
     private function aiSendQuestion(Round $round, $aiUser): void {
 
         $game = $round->getGame();
+        $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
+
+        // N'agir que si l'IA est le question master désigné
+        $qmId = $this->gameRedisService->getRedis()->hget("game:{$gameIdentifier}:round", 'questionAskedBy');
+        if ($qmId !== $aiUser->getId()->toString()) {
+            return;
+        }
+
         $previousQuestions = [];
 
         foreach ($game->getRounds() as $previousRound) {

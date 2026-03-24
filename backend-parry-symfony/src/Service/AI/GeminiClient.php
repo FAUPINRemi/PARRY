@@ -42,7 +42,8 @@ class GeminiClient
                         'maxOutputTokens' => $maxTokens,
                     ]
                 ],
-                'headers' => ['Content-Type' => 'application/json']
+                'headers' => ['Content-Type' => 'application/json'],
+                'timeout' => 20,
             ]);
             
             $data = $response->toArray();
