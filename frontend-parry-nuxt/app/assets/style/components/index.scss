@@ -1,0 +1,107 @@
+@use "../util/media-queries" as *;
+@use "./../util/colors";
+@use "./../util/spacing";
+@use "./../util/font-sizes";
+
+
+.homepageWrap {
+	position: relative;
+	min-height: 100vh;
+	width: 100%;
+	max-width: 1100px;
+	margin: 0 auto;
+	padding: 1.25rem; 
+	box-sizing: border-box;
+}
+
+.homepageGrid {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: 1fr;
+	align-items: start;
+}
+
+@media (min-width: 1024px) {
+	.homepageGrid {
+		grid-template-columns: 1fr 1fr;
+		align-items: stretch;
+	}
+}
+
+.leftCol {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	min-height: 260px;
+	min-width: 0;
+
+	padding-left: 0;
+	padding-top: 0;
+}
+
+.asciiPre {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+	font-style: normal !important;
+	font-weight: 400 !important;
+	letter-spacing: 0 !important;
+	transform: none !important;
+	color: #fff !important;
+	line-height: 1.05;
+	white-space: pre;
+	margin: 0;
+	padding: 0;
+	text-align: left;
+	font-size: clamp(14px, 1.35vw, 22px);
+	-webkit-font-smoothing: none;
+	text-rendering: optimizeSpeed;
+
+	margin-top: 5rem;
+	margin-bottom: 5rem;
+}
+
+
+
+.cardsRow {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 1rem;
+}
+
+@media (min-width: 900px) {
+	.cardsRow {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+
+.joinRow {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.6rem;
+	width: 100%;
+}
+
+@media (max-width: 520px) {
+	.joinRow {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.5rem;
+	}
+}
+
+.joinRow input {
+	flex: 1 1 auto;
+	width: 100%;
+	min-width: 0;
+	padding: 0.55rem 0.8rem;
+	border-radius: 6px;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: rgba(255, 255, 255, 0.06);
+	color: #fff;
+	box-sizing: border-box;
+}
+
+.rightCol {
+	min-height: 1px;
+}

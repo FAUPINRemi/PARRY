@@ -643,7 +643,7 @@ async function startNewGame() {
                 a été éliminé !
               </p>
               <p v-if="players.find(p => p.id === eliminatedPlayerId)?.isAI" class="elimination-box--ai">
-                🎉 C'était l'IA ! Les joueurs ont gagné !
+                C'était l'IA ! Les joueurs ont gagné !
               </p>
               <p v-else class="elimination-box--human">
                 Ce n'était pas l'IA…
@@ -659,256 +659,20 @@ async function startNewGame() {
 
         <!-- ── Fin de partie ──────────────────────────────────────────────── -->
         <template v-else-if="gameStatus === 'finished'">
-          <div class="gameover-screen">
-            <template v-if="winner === 'PLAYERS_WIN'">
-              <template v-if="myRole === 'proai'">
-                <h1 class="gameover-screen--title gameover-screen--ai">Vous avez perdu...</h1>
-                <p>L'IA a été éliminée. Votre mission a échoué.</p>
-              </template>
-              <template v-else>
-                <h1 class="gameover-screen--title gameover-screen--players">Les joueurs ont gagné !</h1>
-                <p>L'IA a été démasquée. Bravo !</p>
-              </template>
-            </template>
-            <template v-else-if="winner === 'AI_WINS'">
-              <template v-if="myRole === 'proai'">
-                <h1 class="gameover-screen--title gameover-screen--players">Vous avez gagné !</h1>
-                <p>L'IA a survécu grâce à vous, Pro-IA !</p>
-              </template>
-              <template v-else>
-                <h1 class="gameover-screen--title gameover-screen--ai">L'IA a gagné !</h1>
-                <p>Les humains ont été trompés.</p>
-              </template>
-            </template>
-            <template v-else>
-              <h1 class="gameover-screen--title">Partie terminée</h1>
-            </template>
-            <div class="gameover-actions">
-              <button v-if="isCreator" class="gButton important" @click="startNewGame">
-                <Icon name="pixelarticons:play" /> Nouvelle partie
-              </button>
-              <button class="gButton" @click="goToMenu">
-                <Icon name="pixelarticons:home" /> Retour au menu
-              </button>
-            </div>
-          </div>
+          <EndGame
+            :winner="winner"
+            :myRole="myRole"
+            :isCreator="isCreator"
+            :startNewGame="startNewGame"
+            :goToMenu="goToMenu"
+          />
         </template>
 
-      </div>
-
-
-    </div>
-  </div>
+      </div> 
+    </div> 
+  </div> 
 </template>
 
 <style scoped lang="scss">
-.gameWrap {
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 1rem;
-  box-sizing: border-box;
-}
-
-.gameGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  align-items: start;
-}
-
-/* --- */
-.players-bar {
-  display: flex;
-  gap: 1.2rem;
-  align-items: center;
-  padding: 0.4rem 0;
-  margin-bottom: 0.8rem;
-  border-bottom: 1px solid #333;
-  font-size: 0.85rem;
-
-  &--alive { color: #4caf50; }
-  &--dead  { color: #f44336; }
-  &--round { color: #aaa; margin-left: auto; }
-}
-
-/* --- */
-.game-screen-title {
-  font-size: 1.4rem;
-  margin: 0 0 1rem 0;
-}
-
-.game-code-display {
-  font-size: 1rem;
-  margin-bottom: 1rem;
-  strong { letter-spacing: 0.15em; }
-}
-
-/* --- */
-.hub-players {
-  margin-bottom: 1.2rem;
-  &--label { font-size: 0.85rem; color: #aaa; margin-bottom: 0.4rem; }
-  &--list  { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
-}
-
-.hub-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
-
-.hub-hint {
-  color: #888;
-  font-size: 0.8rem;
-}
-
-.hub-waiting {
-  color: #aaa;
-  font-size: 0.9rem;
-}
-
-.pro-ai-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.pro-ai-hint {
-  color: #888;
-  font-size: 0.75rem;
-}
-
-/* --- */
-.phase-box {
-  padding: 1rem;
-  border: 1px solid #333;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-
-  &--mine { border-color: #4caf50; }
-}
-
-.phase-hint  { color: #aaa; font-size: 0.85rem; }
-.phase-success { color: #4caf50; }
-
-/* --- */
-.question-display {
-  background: #111;
-  border-left: 3px solid #4caf50;
-  padding: 0.8rem 1rem;
-  margin-bottom: 1rem;
-
-  &--label { color: #aaa; font-size: 0.8rem; margin-bottom: 0.3rem; }
-  &--text  { font-size: 1.1rem; }
-}
-
-/* --- */
-.answers-progress {
-  height: 4px;
-  background: #333;
-  border-radius: 2px;
-  overflow: hidden;
-
-  &--bar {
-    height: 100%;
-    background: #4caf50;
-    transition: width 0.3s;
-  }
-}
-
-/* --- */
-.answers-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-  margin: 0.8rem 0;
-}
-
-.answer-card {
-  border: 1px solid #333;
-  padding: 0.8rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: 0;
-  overflow: hidden;
-
-  &--voted { opacity: 0.7; }
-  &--label { color: #aaa; font-size: 0.8rem; }
-  &--text  { font-size: 1rem; word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap; }
-  &--vote-btn { align-self: flex-start; }
-}
-
-.revote-badge {
-  font-size: 0.75rem;
-  background: #f44336;
-  color: #fff;
-  padding: 0.1rem 0.4rem;
-  vertical-align: middle;
-  margin-left: 0.5rem;
-}
-
-/* --- */
-.elimination-box {
-  padding: 1.5rem;
-  border: 2px solid #f44336;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-
-  &--name  { font-size: 1.2rem; }
-  &--ai    { color: #4caf50; font-size: 1rem; }
-  &--human { color: #888; font-size: 0.9rem; }
-}
-
-/* --- */
-.gameover-screen {
-  text-align: center;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.8rem;
-
-  &--title  { font-size: 1.8rem; margin: 0; }
-  &--players { color: #4caf50; }
-  &--ai      { color: #f44336; }
-}
-
-.gameover-actions {
-  display: flex;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin-top: 1rem;
-}
-
-/* --- */
-.loading-dots {
-  display: flex;
-  gap: 0.3rem;
-  span {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: #aaa;
-    animation: blink 1.2s infinite;
-    &:nth-child(2) { animation-delay: 0.2s; }
-    &:nth-child(3) { animation-delay: 0.4s; }
-  }
-}
-@keyframes blink {
-  0%, 80%, 100% { opacity: 0.2; }
-  40% { opacity: 1; }
-}
-
-li.player--dead  { opacity: 0.45; text-decoration: line-through; }
-li.player--me    { color: #fff; }
-
-.player-icon { margin-right: 0.4rem; font-size: 0.8rem; }
-.tag-me  { color: #aaa; font-size: 0.75rem; margin-left: 0.3rem; }
-.tag-ai  { background: #f44336; color: #fff; font-size: 0.7rem; padding: 0 0.3rem; margin-left: 0.3rem; }
+  @use "@/assets/style/components/panelGame";
 </style>
