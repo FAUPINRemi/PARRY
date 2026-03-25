@@ -8,6 +8,7 @@ use App\Enum\GameStatus;
 use App\Repository\GameRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\GameRedisService;
+use App\Service\MercurePublisherService;
 
 class GameService
 {
@@ -18,7 +19,8 @@ class GameService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly GameRepository $gameRepository,
-        private readonly GameRedisService $gameRedisService
+        private readonly GameRedisService $gameRedisService,
+        private readonly MercurePublisherService $mercurePublisher
     ) {}
 
     public function createGame(bool $isPrivate = false): Game {
@@ -93,6 +95,8 @@ class GameService
 
         $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
         $this->gameRedisService->startGame($gameIdentifier);
+
+        $this->mercurePublisher->publish("/game/{$gameIdentifier}", ['event' => 'game_started']);
     }
 
     public function addAIPlayer(Game $game, User $aiUser): void {
@@ -143,6 +147,31 @@ class GameService
             $game->setWinnerType(\App\Enum\WinnerType::PLAYERS);
         }
 
+        $this->entityManager->flush();
+    }
+
+    public function deleteGame(Game $game): void {
+        $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
+
+        // Publier l'événement avant de supprimer les données
+        $this->mercurePublisher->publish("/game/{$gameIdentifier}", ['event' => 'game_deleted']);
+
+        // Supprimer les clés Redis
+        $redis = $this->gameRedisService->getRedis();
+        $redis->del("game:{$gameIdentifier}:players");
+        $redis->del("game:{$gameIdentifier}:round");
+        $redis->del("game:{$gameIdentifier}:round:reponses");
+        $redis->del("game:{$gameIdentifier}:round:votes");
+        $redis->del("game:{$gameIdentifier}:round:revote");
+        $redis->del("game:{$gameIdentifier}:proai");
+        $redis->del("game:{$gameIdentifier}:creator");
+
+        if ($game->getCode()) {
+            $redis->del("game:code:{$game->getCode()}");
+        }
+
+        // Supprimer l'entité en base de données
+        $this->entityManager->remove($game);
         $this->entityManager->flush();
     }
 }

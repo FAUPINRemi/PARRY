@@ -8,13 +8,15 @@ use App\Entity\User;
 use App\Repository\RoundRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use \App\Service\GameRedisService;
+use App\Service\MercurePublisherService;
 
 class RoundService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly RoundRepository $roundRepository,
-        private readonly GameRedisService $gameRedisService
+        private readonly GameRedisService $gameRedisService,
+        private readonly MercurePublisherService $mercurePublisher
     ) {}
 
     public function createRound(Game $game, ?User $questionMaster = null): Round {
@@ -63,6 +65,8 @@ class RoundService
         $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'questionAskedBy', $questionMaster->getId()->toString());
         $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'status', 'en_attente_question');
 
+        $this->mercurePublisher->publish("/game/{$gameIdentifier}", ['event' => 'round_created']);
+
         return $round;
     }
 
@@ -97,6 +101,8 @@ class RoundService
         $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'question', $questionTexte);
         $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'questionAskedBy', $user->getId()->toString());
         $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'status', 'en_attente_reponses');
+
+        $this->mercurePublisher->publish("/game/{$gameIdentifier}", ['event' => 'state_changed']);
     }
 
     public function reponseRound(Round $round, User $user, string $responseTexte): void {
@@ -147,6 +153,8 @@ class RoundService
         if ($nbReponses >= $joueursOK) {
             $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'status', 'en_attente_votes');
         }
+
+        $this->mercurePublisher->publish("/game/{$gameIdentifier}", ['event' => 'state_changed']);
     }
 
     public function voteRound(Round $round, User $uservote, string $IdJoueurVote): void {
@@ -214,6 +222,8 @@ class RoundService
         if ($nbVotes >= $joueursVivants) {
             $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'status', 'termine');
         }
+
+        $this->mercurePublisher->publish("/game/{$gameIdentifier}", ['event' => 'state_changed']);
     }
 
     public function eliminerJoueur(Round $round): ?string {
@@ -269,6 +279,8 @@ class RoundService
             $round->setEliminatedPlayer($eliminatedUser);
             $this->entityManager->flush();
         }
+
+        $this->mercurePublisher->publish("/game/{$gameIdentifier}", ['event' => 'state_changed']);
 
         return $joueurElimine;
     }

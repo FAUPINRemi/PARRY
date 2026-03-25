@@ -31,6 +31,7 @@ class RateLimitSubscriber implements EventSubscriberInterface
         '/eliminate',      // Élimination d'un joueur
         '/finish',         // Fin de round
         '/check-victory',  // Vérification de victoire
+        '/delete',         // Suppression de partie (sendBeacon déconnexion hôte)
     ];
     
     public function __construct(

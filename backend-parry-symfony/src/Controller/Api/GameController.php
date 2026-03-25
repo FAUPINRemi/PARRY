@@ -412,6 +412,43 @@ class GameController extends AbstractController
         ]);
     }
 
+    #[Route('/{code}/delete', name: 'api_game_delete', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/game/{code}/delete',
+        summary: 'Supprimer une partie (déconnexion du créateur)',
+        tags: ['Game']
+    )]
+    #[OA\Parameter(
+        name: 'code',
+        in: 'path',
+        required: true,
+        description: 'Code de la partie',
+        schema: new OA\Schema(type: 'string', example: 'ABC123')
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Partie supprimée',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true)
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: 'Partie introuvable')]
+    public function deleteGame(string $code): JsonResponse {
+        try {
+            $game = $this->gameRepository->findOneBy(['code' => $code]);
+            if (!$game) {
+                return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+            }
+
+            $this->gameService->deleteGame($game);
+            return $this->json(['success' => true], 200);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'error' => 'ERREUR_SERVEUR'], 500);
+        }
+    }
+
     #[Route('/{code}/check-victory', name: 'api_game_check_victory', methods: ['POST'])]
     public function checkVictory(string $code): JsonResponse {
         try {
