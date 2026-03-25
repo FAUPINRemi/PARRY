@@ -1,0 +1,14 @@
+# Claude
+CLAUDE.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# .env 
+.env.local
+.env.*.local
+.env
+.env.example
+.env.*

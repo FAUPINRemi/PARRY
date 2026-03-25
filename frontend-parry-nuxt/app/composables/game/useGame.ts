@@ -89,12 +89,22 @@ export function useGame() {
 			const res = await apiFetch(`/api/game/${gameCode.value}/state`, { headers: authHeaders() })
 			if (res.status === 401) {
 				if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+				await router.push('/')
 				return
 			}
 			if (!res.ok) return
 
 			const data = await res.json()
 			if (!data.success) return
+
+			// Un joueur a quitté en cours de partie → retour accueil pour tous
+			if (data.game.abandoned === true) {
+				if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+				emitEvent({ message: 'Un joueur a quitté la partie.', type: 'error' })
+				setGameInfo(null)
+				await router.push('/')
+				return
+			}
 
 			const prevGameStatus = gameStatus.value
 			const prevRoundStatus = roundStatus.value
@@ -103,8 +113,12 @@ export function useGame() {
 			gameStatus.value = data.game.status
 			players.value = data.game.players || []
 
+			if (data.game.isCreator === true) isCreator.value = true
+			if (data.game.myUserId && !myUserId.value) myUserId.value = data.game.myUserId
+
 			if (data.game.winner === 'players') winner.value = 'PLAYERS_WIN'
 			else if (data.game.winner === 'ai') winner.value = 'AI_WINS'
+			else winner.value = null
 
 			if (data.game.round) {
 				const r = data.game.round
@@ -402,8 +416,8 @@ export function useGame() {
 		try {
 			const res = await apiFetch(`/api/round/${roundId.value}/question`, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json', ...authHeaders() },
-				body: JSON.stringify({ userId: myUserId.value, question: text })
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ question: text })
 			})
 
 			const data = await res.json()
@@ -425,8 +439,8 @@ export function useGame() {
 		try {
 			const res = await apiFetch(`/api/round/${roundId.value}/response`, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json', ...authHeaders() },
-				body: JSON.stringify({ userId: myUserId.value, response: text })
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ response: text })
 			})
 
 			const data = await res.json()
@@ -449,8 +463,8 @@ export function useGame() {
 		try {
 			const res = await apiFetch(`/api/round/${roundId.value}/vote`, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json', ...authHeaders() },
-				body: JSON.stringify({ voterId: myUserId.value, targetPlayerId })
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ targetPlayerId })
 			})
 
 			const data = await res.json()
@@ -488,41 +502,55 @@ export function useGame() {
 	}
 
 	async function goToMenu() {
-		if (isCreator.value) localStorage.removeItem(`parry_creator_${gameCode.value}`)
+		intentionalLeave = true
+		if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
 		setGameInfo(null)
+		try {
+			await apiFetch(`/api/game/${gameCode.value}/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+		} catch { /* silent — on navigue quand même */ }
 		await router.push('/')
 	}
 
 	async function startNewGame() {
-		if (isCreator.value) localStorage.removeItem(`parry_creator_${gameCode.value}`)
-		setGameInfo(null)
-
-		const { apiFetch: fetch } = useApi()
-
+		if (!isCreator.value) return
+		intentionalLeave = true
 		try {
-			const res = await fetch('/api/game/create', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', ...authHeaders() },
-				body: JSON.stringify({ isPrivate: true })
-			})
-
+			const res = await apiFetch(`/api/game/${gameCode.value}/restart`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
 			const data = await res.json()
-
-			if (data.success) {
-				const code = data.game.code || data.game.id
-				localStorage.setItem(`parry_creator_${code}`, '1')
-				await router.push({ path: '/game', query: { code } })
-			}
+			if (!data.success) emitEvent({ message: 'Erreur lors du redémarrage', type: 'error' })
+			intentionalLeave = false // reset pour permettre le nouveau cycle
+			// Le polling détecte status='waiting' → retour au lobby automatiquement
 		} catch {
-			await router.push('/')
+			emitEvent({ message: 'Erreur réseau (restart)', type: 'error' })
 		}
+	}
+
+	// --- gestion déconnexion (fermeture navigateur)
+	let intentionalLeave = false
+
+	function sendLeaveBeacon() {
+		if (intentionalLeave || !gameCode.value) return
+		const config = useRuntimeConfig()
+		const apiBase = config.public.apiBase as string
+		// fetch keepalive : envoie la requête même si la page se ferme, supporte credentials
+		fetch(`${apiBase}/api/game/${gameCode.value}/leave`, {
+			method: 'POST',
+			credentials: 'include',
+			headers: { 'Content-Type': 'application/json' },
+			keepalive: true
+		}).catch(() => {})
 	}
 
 	// --- lifecycle
 	onMounted(async () => {
-		myUserId.value = localStorage.getItem('userId')
 		gameCode.value = (route.query.code as string) || ''
-		isCreator.value = !!localStorage.getItem(`parry_creator_${gameCode.value}`)
+
+		// userId depuis localStorage (non-sensible, juste identifiant UI)
+		myUserId.value = localStorage.getItem('userId')
+
+		if (process.client) {
+			window.addEventListener('beforeunload', sendLeaveBeacon)
+		}
 
 		unsubTerminal = onTerminalSubmit(({ type, value }) => {
 			if (type === 'question') submitQuestion(value)
@@ -537,6 +565,9 @@ export function useGame() {
 	onUnmounted(() => {
 		if (pollInterval) clearInterval(pollInterval)
 		if (unsubTerminal) unsubTerminal()
+		if (process.client) {
+			window.removeEventListener('beforeunload', sendLeaveBeacon)
+		}
 		setTerminalAction(null)
 		setGameInfo(null)
 	})

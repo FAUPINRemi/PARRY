@@ -31,6 +31,14 @@ class RateLimitSubscriber implements EventSubscriberInterface
         '/eliminate',      // Élimination d'un joueur
         '/finish',         // Fin de round
         '/check-victory',  // Vérification de victoire
+        '/restart',        // Relance de partie
+        '/delete',         // Suppression de partie
+        '/leave',          // Départ d'un joueur
+    ];
+
+    // Suffixes GET exclus supplémentaires
+    private const EXCLUDED_GET_EXACT = [
+        '/api/game/active', // Vérification de partie active (reconnexion)
     ];
     
     public function __construct(
@@ -64,6 +72,11 @@ class RateLimitSubscriber implements EventSubscriberInterface
         if ($request->getMethod() === 'GET') {
             foreach (self::EXCLUDED_GET_SUFFIXES as $suffix) {
                 if (str_ends_with($path, $suffix)) {
+                    return;
+                }
+            }
+            foreach (self::EXCLUDED_GET_EXACT as $exact) {
+                if ($path === $exact) {
                     return;
                 }
             }

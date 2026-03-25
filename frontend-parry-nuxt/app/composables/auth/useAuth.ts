@@ -78,6 +78,15 @@ export function useAuth() {
 		}
 	}
 
+	// Déconnexion forcée sans appel backend (session expirée côté serveur)
+	function forceLogout() {
+		connectedPseudo.value = null
+		if (process.client) {
+			localStorage.removeItem('userPseudo')
+			localStorage.removeItem('userId')
+		}
+	}
+
 	async function logout() {
 		loading.value = true
 		error.value = null
@@ -110,6 +119,7 @@ export function useAuth() {
 		connectedPseudo,
 		isLoggedIn,
 		initFromStorage,
+		forceLogout,
 		login,
 		register,
 		logout,
