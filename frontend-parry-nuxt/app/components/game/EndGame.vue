@@ -14,7 +14,6 @@ const props = defineProps<{
 
 const isPlayersWin = computed(() => props.winner === 'PLAYERS_WIN')
 
-// ── ASCII art victoire joueurs ──────────────────────────────────────────────
 const ASCII_WIN = `
   _   _ ___ ____ _____ ___  ___ ___ _  _____   _
  | | | |_  _/ ___|_   _/ _ \\|_ _|| _ \\| ____| | |

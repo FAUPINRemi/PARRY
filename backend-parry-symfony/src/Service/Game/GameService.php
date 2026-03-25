@@ -206,7 +206,6 @@ class GameService
         $identifier = $game->getCode() ?? $game->getId()->toString();
         $redis = $this->gameRedisService->getRedis();
 
-        // Nettoyage Redis
         $keys = [
             "game:{$identifier}",
             "game:{$identifier}:players",
@@ -223,14 +222,12 @@ class GameService
             $redis->del(["game:code:{$game->getCode()}"]);
         }
 
-        // Nettoyage des clés activeGame pour tous les joueurs
         foreach ($game->getPlayers() as $player) {
             if (!in_array('ROLE_AI', $player->getRoles())) {
                 $redis->del(['user:' . $player->getId()->toString() . ':activeGame']);
             }
         }
 
-        // Suppression DB (cascade sur rounds + game_players)
         $this->entityManager->remove($game);
         $this->entityManager->flush();
     }
