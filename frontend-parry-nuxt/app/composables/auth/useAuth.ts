@@ -93,7 +93,7 @@ export function useAuth() {
 
 		try {
 			const res = await apiFetch('/api/logout', { method: 'POST' })
-			if (res.ok) {
+			if (res.ok || res.status === 401) {
 				connectedPseudo.value = null
 				if (process.client) {
 					localStorage.removeItem('userPseudo')
@@ -105,8 +105,11 @@ export function useAuth() {
 				emitEvent({ message: error.value, type: 'error' })
 			}
 		} catch {
-			error.value = 'Erreur réseau'
-			emitEvent({ message: error.value, type: 'error' })
+			connectedPseudo.value = null
+			if (process.client) {
+				localStorage.removeItem('userPseudo')
+				localStorage.removeItem('userId')
+			}
 		} finally {
 			loading.value = false
 		}

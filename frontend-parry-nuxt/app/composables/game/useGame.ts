@@ -50,7 +50,7 @@ export function useGame() {
 	const enableProAI = ref(false)
 
 	const startCountdown = ref(0)
-	
+
 	const lockedAnswers = ref<Answer[]>([])
 	const answersLocked = ref(false)
 	const lastRoundId = ref<string | null>(null)
