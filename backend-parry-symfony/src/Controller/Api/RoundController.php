@@ -127,11 +127,16 @@ class RoundController extends AbstractController
     #[OA\Response(response: 400, description: 'Données manquantes')]
     #[OA\Response(response: 404, description: 'Round ou utilisateur introuvable')]
     public function submitQuestion(string $roundId, Request $request): JsonResponse {
+        /** @var \App\Entity\User|null $user */
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['success' => false, 'error' => 'NON_AUTHENTIFIE'], 401);
+        }
+
         $data = json_decode($request->getContent(), true);
-        $userId = $data['userId'] ?? null;
         $questionTexte = $data['question'] ?? null;
 
-        if (!$userId || !$questionTexte) {
+        if (!$questionTexte) {
             return $this->json(['success' => false, 'error' => 'DONNEES_MANQUANTES'], 400);
         }
 
@@ -139,11 +144,6 @@ class RoundController extends AbstractController
             $round = $this->roundRepository->find($roundId);
             if (!$round) {
                 return $this->json(['success' => false, 'error' => 'ROUND_INTROUVABLE'], 404);
-            }
-
-            $user = $this->userRepository->find($userId);
-            if (!$user) {
-                return $this->json(['success' => false, 'error' => 'UTILISATEUR_INTROUVABLE'], 404);
             }
 
             $this->roundService->questionRound($round, $user, $questionTexte);
@@ -190,11 +190,16 @@ class RoundController extends AbstractController
     #[OA\Response(response: 400, description: 'Données manquantes')]
     #[OA\Response(response: 404, description: 'Round ou utilisateur introuvable')]
     public function submitResponse(string $roundId, Request $request): JsonResponse {
+        /** @var \App\Entity\User|null $user */
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['success' => false, 'error' => 'NON_AUTHENTIFIE'], 401);
+        }
+
         $data = json_decode($request->getContent(), true);
-        $userId = $data['userId'] ?? null;
         $responseTexte = $data['response'] ?? null;
 
-        if (!$userId || !$responseTexte) {
+        if (!$responseTexte) {
             return $this->json(['success' => false, 'error' => 'DONNEES_MANQUANTES'], 400);
         }
 
@@ -204,19 +209,11 @@ class RoundController extends AbstractController
                 return $this->json(['success' => false, 'error' => 'ROUND_INTROUVABLE'], 404);
             }
 
-            $user = $this->userRepository->find($userId);
-            if (!$user) {
-                return $this->json(['success' => false, 'error' => 'UTILISATEUR_INTROUVABLE'], 404);
-            }
-
             $this->roundService->reponseRound($round, $user, $responseTexte);
 
             return $this->json(['success' => true, 'message' => 'Réponse soumise'], 200);
         } catch (\RuntimeException $e) {
-            return $this->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], $e->getCode());
+            return $this->json(['success' => false, 'error' => $e->getMessage()], $e->getCode());
         }
     }
 
@@ -256,11 +253,16 @@ class RoundController extends AbstractController
     #[OA\Response(response: 400, description: 'Données manquantes')]
     #[OA\Response(response: 404, description: 'Round ou votant introuvable')]
     public function submitVote(string $roundId, Request $request): JsonResponse {
+        /** @var \App\Entity\User|null $user */
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['success' => false, 'error' => 'NON_AUTHENTIFIE'], 401);
+        }
+
         $data = json_decode($request->getContent(), true);
-        $voterId = $data['voterId'] ?? null;
         $targetPlayerId = $data['targetPlayerId'] ?? null;
 
-        if (!$voterId || !$targetPlayerId) {
+        if (!$targetPlayerId) {
             return $this->json(['success' => false, 'error' => 'DONNEES_MANQUANTES'], 400);
         }
 
@@ -270,12 +272,7 @@ class RoundController extends AbstractController
                 return $this->json(['success' => false, 'error' => 'ROUND_INTROUVABLE'], 404);
             }
 
-            $voter = $this->userRepository->find($voterId);
-            if (!$voter) {
-                return $this->json(['success' => false, 'error' => 'VOTANT_INTROUVABLE'], 404);
-            }
-
-            $this->roundService->voteRound($round, $voter, $targetPlayerId);
+            $this->roundService->voteRound($round, $user, $targetPlayerId);
 
             return $this->json(['success' => true, 'message' => 'Vote enregistré'], 200);
         } catch (\RuntimeException $e) {

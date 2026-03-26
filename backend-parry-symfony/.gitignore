@@ -14,6 +14,8 @@
 /.phpunit.cache/
 ###< phpunit/phpunit ###
 
+CLAUDE.md
+
 ###> symfony/asset-mapper ###
 /public/assets/
 /assets/vendor/
