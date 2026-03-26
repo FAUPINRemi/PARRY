@@ -78,7 +78,6 @@ export function useAuth() {
 		}
 	}
 
-	// Déconnexion forcée sans appel backend (session expirée côté serveur)
 	function forceLogout() {
 		connectedPseudo.value = null
 		if (process.client) {
