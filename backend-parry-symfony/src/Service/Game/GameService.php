@@ -8,6 +8,7 @@ use App\Enum\GameStatus;
 use App\Repository\GameRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\GameRedisService;
+use App\Service\MercurePublisherService;
 
 class GameService
 {
@@ -18,7 +19,8 @@ class GameService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly GameRepository $gameRepository,
-        private readonly GameRedisService $gameRedisService
+        private readonly GameRedisService $gameRedisService,
+        private readonly MercurePublisherService $mercurePublisher
     ) {}
 
     public function createGame(bool $isPrivate = false, ?string $creatorUserId = null): Game {
@@ -100,6 +102,8 @@ class GameService
 
         $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
         $this->gameRedisService->startGame($gameIdentifier);
+
+        $this->mercurePublisher->publish("/game/{$gameIdentifier}", ['event' => 'game_started']);
     }
 
     public function addAIPlayer(Game $game, User $aiUser): void {
@@ -153,6 +157,27 @@ class GameService
         $this->entityManager->flush();
     }
 
+    public function deleteGame(Game $game): void {
+        $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
+
+        // Publier l'événement avant de supprimer les données
+        $this->mercurePublisher->publish("/game/{$gameIdentifier}", ['event' => 'game_deleted']);
+
+        // Supprimer les clés Redis
+        $redis = $this->gameRedisService->getRedis();
+        $redis->del("game:{$gameIdentifier}:players");
+        $redis->del("game:{$gameIdentifier}:round");
+        $redis->del("game:{$gameIdentifier}:round:reponses");
+        $redis->del("game:{$gameIdentifier}:round:votes");
+        $redis->del("game:{$gameIdentifier}:round:revote");
+        $redis->del("game:{$gameIdentifier}:proai");
+        $redis->del("game:{$gameIdentifier}:creator");
+
+        if ($game->getCode()) {
+            $redis->del("game:code:{$game->getCode()}");
+        }
+
+        // Supprimer l'entité en base de données
     public function restartGame(Game $game): void
     {
         $identifier = $game->getCode() ?? $game->getId()->toString();
@@ -179,7 +204,7 @@ class GameService
 
         $this->entityManager->flush();
 
-        // Nettoyage Redis — état du round + flag abandon
+        // Nettoyage Redis — état du round +  abandon
         foreach (['round', 'round:reponses', 'round:votes', 'round:revote', 'proai', 'abandoned'] as $suffix) {
             $redis->del(["game:{$identifier}:{$suffix}"]);
         }

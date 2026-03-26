@@ -32,15 +32,32 @@ class ResponseGeneratorAI
             'décontracté',
             'pressé'
         ];
-        
+
         $selectedStyle = $styles[array_rand($styles)];
-        
+
+        $humanResponsesSection = '';
+        if (!empty($context['human_responses'])) {
+            $responseLines = implode("\n", array_map(
+                fn(string $r) => '- "' . $r . '"',
+                $context['human_responses']
+            ));
+            $humanResponsesSection = <<<SECTION
+
+RÉPONSES DES AUTRES JOUEURS (humains)
+Voici ce que les autres joueurs ont répondu. Analyse leur style commun (longueur, registre, abréviations, niveau de fautes) et reproduis ce style dans ta propre réponse. Ne copie PAS le contenu, mais adapte-toi au ton général du groupe :
+$responseLines
+
+CONSIGNE STYLE
+Adopte le même niveau de familiarité, la même longueur approximative et le même niveau d'abréviations/fautes que ce groupe. Si tout le monde écrit court, écris court. Si tout le monde utilise des abréviations, fais pareil.
+SECTION;
+        }
+
         return <<<PROMPT
 Tu es un humain qui répond vite à une question dans un jeu avec timer.
 
-STYLE DE CETTE RÉPONSE
+STYLE DE BASE
 $selectedStyle
-
+$humanResponsesSection
 CONSIGNES
 - Entre 5 et 35 mots maximum
 - Écris comme si tu tapais vite sur ton téléphone

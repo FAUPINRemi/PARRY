@@ -14,13 +14,12 @@ import { authHeaders, playerAlias as playerAliasUtil } from '@/components/game/u
 
 export function useGame() {
 	const { emitEvent, setTerminalAction, onTerminalSubmit } = useTerminal()
-	const { apiFetch } = useApi()
+	const { apiFetch, apiBase } = useApi()
 	const { setGameInfo } = useGameInfo()
 
 	const route = useRoute()
 	const router = useRouter()
 
-	// --- state
 	const gameCode = ref('')
 	const gameStatus = ref<GameStatus>('waiting')
 	const players = ref<Player[]>([])
@@ -50,8 +49,8 @@ export function useGame() {
 	const hasVoted = ref(false)
 	const enableProAI = ref(false)
 
-	const startCountdown = ref(0) // gardé si utilisé ailleurs
-
+	const startCountdown = ref(0)
+	
 	const lockedAnswers = ref<Answer[]>([])
 	const answersLocked = ref(false)
 	const lastRoundId = ref<string | null>(null)
@@ -62,9 +61,10 @@ export function useGame() {
 
 	let aiTriggerRound = ''
 	let aiTriggerTime = 0
+	let aiResponseTriggerRound = ''
+	let aiResponseTriggerTime = 0
 	const AI_RETRY_INTERVAL = 10_000
 
-	// --- computed
 	const isMyTurnToAsk = computed(() => questionMasterId.value === myUserId.value)
 
 	const alivePlayers = computed(() => players.value.filter(p => p.isAlive))
@@ -76,18 +76,21 @@ export function useGame() {
 		return me ? me.isAlive : true
 	})
 
-	// --- helpers
 	function playerAlias(playerId: string): string {
 		return playerAliasUtil(playerId, players.value, myUserId.value)
 	}
 
-	// --- polling
 	let pollInterval: ReturnType<typeof setInterval> | null = null
 
 	async function fetchGameState() {
 		try {
 			const res = await apiFetch(`/api/game/${gameCode.value}/state`, { headers: authHeaders() })
 			if (res.status === 401) {
+				if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+				await router.push('/')
+				return
+			}
+			if (res.status === 404) {
 				if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
 				await router.push('/')
 				return
@@ -109,6 +112,7 @@ export function useGame() {
 			const prevGameStatus = gameStatus.value
 			const prevRoundStatus = roundStatus.value
 			const prevRoundId = roundId.value
+			const prevAnsweredCount = answeredCount.value
 
 			gameStatus.value = data.game.status
 			players.value = data.game.players || []
@@ -166,7 +170,6 @@ export function useGame() {
 				myUserId: myUserId.value,
 			})
 
-			// trigger IA (créateur)
 			if (isCreator.value && roundStatus.value === 'en_attente_question' && roundId.value) {
 				const now = Date.now()
 				if (roundId.value !== aiTriggerRound || now - aiTriggerTime > AI_RETRY_INTERVAL) {
@@ -174,6 +177,16 @@ export function useGame() {
 					aiTriggerRound = roundId.value
 					aiTriggerTime = now
 					triggerAI(isFirstTrigger ? 2500 : 0)
+				}
+			}
+
+			if (isCreator.value && roundStatus.value === 'en_attente_reponses' && roundId.value) {
+				const now = Date.now()
+				const answeredChanged = answeredCount.value !== prevAnsweredCount
+				if (answeredChanged || roundId.value !== aiResponseTriggerRound || now - aiResponseTriggerTime > AI_RETRY_INTERVAL) {
+					aiResponseTriggerRound = roundId.value
+					aiResponseTriggerTime = now
+					triggerAI()
 				}
 			}
 
@@ -185,11 +198,9 @@ export function useGame() {
 				onRoundStatusChange(roundStatus.value, prevRoundStatus)
 			}
 		} catch {
-			/* silent */
 		}
 	}
 
-	// --- transitions
 	function onGameStatusChange(status: GameStatus) {
 		if (status === 'in_progress') {
 			emitEvent({ message: 'La partie a commencé !', type: 'success' })
@@ -255,7 +266,6 @@ export function useGame() {
 		}
 	}
 
-	// --- API actions
 	async function createNewRound() {
 		try {
 			const res = await apiFetch('/api/round/create', {
@@ -297,7 +307,6 @@ export function useGame() {
 				})
 			}
 		} catch {
-			/* retry handled by polling */
 		}
 	}
 
@@ -406,7 +415,6 @@ export function useGame() {
 				emitEvent({ message: "Vous etes le Pro-IA ! Aidez l'IA a survivre.", type: 'info' })
 			}
 		} catch {
-			/* silent */
 		}
 	}
 
@@ -480,7 +488,6 @@ export function useGame() {
 		}
 	}
 
-	// --- join / navigation
 	let unsubTerminal: (() => void) | undefined
 
 	async function joinGameIfNeeded() {
@@ -518,21 +525,25 @@ export function useGame() {
 			const res = await apiFetch(`/api/game/${gameCode.value}/restart`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
 			const data = await res.json()
 			if (!data.success) emitEvent({ message: 'Erreur lors du redémarrage', type: 'error' })
-			intentionalLeave = false // reset pour permettre le nouveau cycle
-			// Le polling détecte status='waiting' → retour au lobby automatiquement
+			intentionalLeave = false 
 		} catch {
 			emitEvent({ message: 'Erreur réseau (restart)', type: 'error' })
 		}
 	}
 
-	// --- gestion déconnexion (fermeture navigateur)
+	const { connect: mercureConnect, disconnect: mercureDisconnect } = useGameEvents(
+		gameCode,
+		() => fetchGameState()
+	)
+
+	let handleBeforeUnload: (() => void) | null = null
+
 	let intentionalLeave = false
 
 	function sendLeaveBeacon() {
 		if (intentionalLeave || !gameCode.value) return
 		const config = useRuntimeConfig()
 		const apiBase = config.public.apiBase as string
-		// fetch keepalive : envoie la requête même si la page se ferme, supporte credentials
 		fetch(`${apiBase}/api/game/${gameCode.value}/leave`, {
 			method: 'POST',
 			credentials: 'include',
@@ -541,11 +552,9 @@ export function useGame() {
 		}).catch(() => {})
 	}
 
-	// --- lifecycle
 	onMounted(async () => {
 		gameCode.value = (route.query.code as string) || ''
 
-		// userId depuis localStorage (non-sensible, juste identifiant UI)
 		myUserId.value = localStorage.getItem('userId')
 
 		if (process.client) {
@@ -558,13 +567,32 @@ export function useGame() {
 		})
 
 		await joinGameIfNeeded()
+
+		mercureConnect()
+
 		fetchGameState()
-		pollInterval = setInterval(fetchGameState, 2500)
+		pollInterval = setInterval(fetchGameState, 5000)
+
+		if (isCreator.value) {
+			handleBeforeUnload = () => {
+				if (gameCode.value) {
+					fetch(`${apiBase}/api/game/${gameCode.value}/delete`, {
+						method: 'POST',
+						keepalive: true,
+						credentials: 'include'
+					})
+				}
+			}
+			window.addEventListener('beforeunload', handleBeforeUnload)
+		}
 	})
 
 	onUnmounted(() => {
 		if (pollInterval) clearInterval(pollInterval)
 		if (unsubTerminal) unsubTerminal()
+		mercureDisconnect()
+		if (handleBeforeUnload) {
+			window.removeEventListener('beforeunload', handleBeforeUnload)
 		if (process.client) {
 			window.removeEventListener('beforeunload', sendLeaveBeacon)
 		}
@@ -573,7 +601,6 @@ export function useGame() {
 	})
 
 	return {
-		// state
 		gameCode,
 		gameStatus,
 		players,
@@ -604,14 +631,12 @@ export function useGame() {
 		enableProAI,
 		startCountdown,
 
-		// computed / helpers
 		isMyTurnToAsk,
 		alivePlayers,
 		deadPlayers,
 		amIAlive,
 		playerAlias,
 
-		// actions
 		startGame,
 		submitVote,
 		goToMenu,

@@ -89,7 +89,44 @@ class AIJoueurService
             throw new \RuntimeException('AUCUNE_QUESTION_DANS_LE_ROUND', 400);
         }
 
-        $response = $this->aiOrchestrator->generateResponse($question);
+        $game = $round->getGame();
+        $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
+
+        // Récupérer tous les joueurs vivants depuis Redis
+        $playersRaw = $this->gameRedisService->getRedis()->hgetall("game:{$gameIdentifier}:players") ?: [];
+
+        $humanAliveIds = [];
+        foreach ($playersRaw as $playerId => $playerJson) {
+            $p = json_decode($playerJson, true);
+            if (($p['isAlive'] ?? true) && !($p['isAI'] ?? false)) {
+                $humanAliveIds[] = $playerId;
+            }
+        }
+
+        // Récupérer les réponses déjà soumises
+        $reponsesRaw = $this->gameRedisService->getRedis()->hgetall("game:{$gameIdentifier}:round:reponses") ?: [];
+
+        // Vérifier si tous les humains ont répondu
+        $humanResponded = 0;
+        $humanResponseTexts = [];
+        foreach ($humanAliveIds as $humanId) {
+            if (isset($reponsesRaw[$humanId])) {
+                $humanResponded++;
+                $decoded = json_decode($reponsesRaw[$humanId], true);
+                if (isset($decoded['reponse'])) {
+                    $humanResponseTexts[] = $decoded['reponse'];
+                }
+            }
+        }
+
+        // Si tous les humains n'ont pas encore répondu, on attend
+        if ($humanResponded < count($humanAliveIds)) {
+            return;
+        }
+
+        $response = $this->aiOrchestrator->generateResponse($question, [
+            'human_responses' => $humanResponseTexts
+        ]);
 
         $this->roundService->reponseRound($round, $aiUser, $response);
     }

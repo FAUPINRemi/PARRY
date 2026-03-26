@@ -12,33 +12,31 @@ use Symfony\Component\HttpKernel\KernelEvents;
 class RateLimitSubscriber implements EventSubscriberInterface
 {
     private const EXCLUDED_ROUTES = [
-        '/api/doc',        // Swagger UI
-        '/api/doc.json',   // Swagger JSON
-        '/_profiler',      // Symfony Profiler
-        '/api/ai/',        // Orchestration IA (créateur uniquement)
+        '/api/doc',       
+        '/api/doc.json',   
+        '/_profiler',      
+        '/api/ai/',        
     ];
 
-    // Routes GET exclues du rate limiting (polling légitime)
     private const EXCLUDED_GET_SUFFIXES = [
-        '/state',          // Polling d'état de la partie (toutes les 2.5s)
-        '/my-role',        // Récupération du rôle au démarrage de partie
+        '/state',         
+        '/my-role',        
     ];
 
-    // Suffixes POST exclus : orchestration partie (créateur uniquement, non-spammable)
     private const EXCLUDED_POST_SUFFIXES = [
-        '/start',          // Démarrage de partie
-        '/create',         // Création de round
-        '/eliminate',      // Élimination d'un joueur
-        '/finish',         // Fin de round
-        '/check-victory',  // Vérification de victoire
-        '/restart',        // Relance de partie
-        '/delete',         // Suppression de partie
-        '/leave',          // Départ d'un joueur
+        '/start',         
+        '/create',         
+        '/eliminate',     
+        '/finish',         
+        '/check-victory',  
+        '/delete',         
+        '/restart',       
+        '/delete',         
+        '/leave',          
     ];
 
-    // Suffixes GET exclus supplémentaires
     private const EXCLUDED_GET_EXACT = [
-        '/api/game/active', // Vérification de partie active (reconnexion)
+        '/api/game/active', 
     ];
     
     public function __construct(
@@ -61,7 +59,6 @@ class RateLimitSubscriber implements EventSubscriberInterface
         
         $request = $event->getRequest();
 
-        // Les OPTIONS (CORS preflight) ne comptent pas comme des vraies requêtes
         if ($request->getMethod() === 'OPTIONS') {
             return;
         }
@@ -98,19 +95,15 @@ class RateLimitSubscriber implements EventSubscriberInterface
             }
         }
         
-        // Appliquer seulement sur les routes /api
         if (!str_starts_with($path, '/api')) {
             return;
         }
         
-        // Identifier l'utilisateur par IP
         $identifier = $this->getIdentifier($request);
         
-        // Vérifier le rate limit
         $result = $this->rateLimiter->isAllowed($identifier, $path);
         
         if (!$result['allowed']) {
-            // Logger la tentative d'abus
             $this->logger->warning('Rate limit exceeded', [
                 'ip' => $request->getClientIp(),
                 'path' => $path,
@@ -118,7 +111,6 @@ class RateLimitSubscriber implements EventSubscriberInterface
                 'user_agent' => $request->headers->get('User-Agent')
             ]);
             
-            // Répondre avec 429 Too Many Requests
             $response = new JsonResponse([
                 'error' => 'Rate limit exceeded',
                 'message' => $result['reason'],
@@ -135,17 +127,14 @@ class RateLimitSubscriber implements EventSubscriberInterface
     
     private function getIdentifier($request): string
     {
-        // Prefer per-user bucketing via JWT (cookie or Authorization header),
-        // so players behind the same NAT IP each get their own rate limit bucket.
+   
         $token = null;
 
-        // 1) Authorization: Bearer header
         $auth = $request->headers->get('Authorization', '');
         if (str_starts_with($auth, 'Bearer ')) {
             $token = substr($auth, 7);
         }
 
-        // 2) access_token cookie (httpOnly JWT set by JwtCookieAuthenticationSuccessHandler)
         if ($token === null) {
             $token = $request->cookies->get('access_token');
         }
