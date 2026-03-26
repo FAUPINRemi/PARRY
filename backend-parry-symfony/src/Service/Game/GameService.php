@@ -23,7 +23,7 @@ class GameService
         private readonly MercurePublisherService $mercurePublisher
     ) {}
 
-    public function createGame(bool $isPrivate = false): Game {
+    public function createGame(bool $isPrivate = false, ?string $creatorUserId = null): Game {
         $game = new Game();
         $game->setIsPrivate($isPrivate);
 
@@ -37,6 +37,10 @@ class GameService
 
         $gameIdentifier = $isPrivate ? $game->getCode() : $game->getId()->toString();
         $this->gameRedisService->createGame($gameIdentifier, ['maxRounds' => 5]);
+
+        if ($creatorUserId && $gameIdentifier) {
+            $this->gameRedisService->getRedis()->setex("game:{$gameIdentifier}:creator", 86400, $creatorUserId);
+        }
 
         return $game;
     }
@@ -76,6 +80,9 @@ class GameService
 
         $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
         $this->gameRedisService->addPlayer($gameIdentifier, $user->getId()->toString(), $user->getPseudo(), false);
+
+        // Mémorise la partie active de l'utilisateur (pour reconnexion)
+        $this->gameRedisService->getRedis()->setex('user:' . $user->getId()->toString() . ':activeGame', 86400, $game->getCode() ?? $game->getId()->toString());
     }
 
     public function debutGame(Game $game): void {
@@ -171,6 +178,81 @@ class GameService
         }
 
         // Supprimer l'entité en base de données
+    public function restartGame(Game $game): void
+    {
+        $identifier = $game->getCode() ?? $game->getId()->toString();
+        $redis = $this->gameRedisService->getRedis();
+
+        // Reset l'entité DB
+        $game->setStatus(GameStatus::WAITING);
+        $game->setWinnerType(null);
+        $game->setStartedAt(null);
+        $game->setFinishedAt(null);
+
+        // Suppression des rounds
+        foreach ($game->getRounds() as $round) {
+            $this->entityManager->remove($round);
+        }
+
+        // Suppression du joueur IA
+        foreach ($game->getPlayers() as $player) {
+            if (in_array('ROLE_AI', $player->getRoles())) {
+                $game->removePlayer($player);
+                break;
+            }
+        }
+
+        $this->entityManager->flush();
+
+        // Nettoyage Redis — état du round +  abandon
+        foreach (['round', 'round:reponses', 'round:votes', 'round:revote', 'proai', 'abandoned'] as $suffix) {
+            $redis->del(["game:{$identifier}:{$suffix}"]);
+        }
+
+        // Remise en vie des joueurs humains, suppression de l'IA
+        $playersRaw = $redis->hgetall("game:{$identifier}:players") ?: [];
+        foreach ($playersRaw as $playerId => $playerJson) {
+            $p = json_decode($playerJson, true);
+            if ($p['isAI'] ?? false) {
+                $redis->hdel("game:{$identifier}:players", [$playerId]);
+            } else {
+                $p['isAlive'] = true;
+                $redis->hset("game:{$identifier}:players", $playerId, json_encode($p));
+            }
+        }
+
+        // Reset statut Redis
+        $redis->hset("game:{$identifier}", 'status', 'waiting');
+        $redis->hset("game:{$identifier}", 'currentRound', 0);
+    }
+
+    public function deleteGame(Game $game): void
+    {
+        $identifier = $game->getCode() ?? $game->getId()->toString();
+        $redis = $this->gameRedisService->getRedis();
+
+        $keys = [
+            "game:{$identifier}",
+            "game:{$identifier}:players",
+            "game:{$identifier}:round",
+            "game:{$identifier}:round:reponses",
+            "game:{$identifier}:round:votes",
+            "game:{$identifier}:round:revote",
+            "game:{$identifier}:proai",
+        ];
+        foreach ($keys as $key) {
+            $redis->del([$key]);
+        }
+        if ($game->getCode()) {
+            $redis->del(["game:code:{$game->getCode()}"]);
+        }
+
+        foreach ($game->getPlayers() as $player) {
+            if (!in_array('ROLE_AI', $player->getRoles())) {
+                $redis->del(['user:' . $player->getId()->toString() . ':activeGame']);
+            }
+        }
+
         $this->entityManager->remove($game);
         $this->entityManager->flush();
     }

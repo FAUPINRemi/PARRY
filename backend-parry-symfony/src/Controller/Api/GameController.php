@@ -64,11 +64,13 @@ class GameController extends AbstractController
     )]
     #[OA\Response(response: 400, description: 'Erreur lors de la création')]
     public function createGame(Request $request): JsonResponse {
+        /** @var \App\Entity\User|null $creator */
+        $creator = $this->getUser();
         $data = json_decode($request->getContent(), true);
         $isPrivate = $data['isPrivate'] ?? false;
-        
+
         try {
-            $game = $this->gameService->createGame($isPrivate);
+            $game = $this->gameService->createGame($isPrivate, $creator?->getId()?->toString());
             
             return $this->json([
                 'success' => true,
@@ -198,13 +200,12 @@ class GameController extends AbstractController
             // Ajouter l'IA comme joueur
             $this->gameService->addAIPlayer($game, $aiUser);
 
-            // Assignation du rôle Pro-IA si activé
+            // Ajout du rôle Pro-IA si activé
             if ($proAiEnabled) {
                 $identifier = $game->getCode() ?? $game->getId()->toString();
                 $redis = $this->gameRedisService->getRedis();
                 $playersRaw = $redis->hgetall("game:{$identifier}:players") ?: [];
 
-                // Garder uniquement les joueurs humains vivants
                 $humanIds = [];
                 foreach ($playersRaw as $playerId => $playerJson) {
                     $p = json_decode($playerJson, true);
@@ -334,7 +335,17 @@ class GameController extends AbstractController
         $redis = $this->gameRedisService->getRedis();
         $identifier = $game->getCode() ?? $game->getId()->toString();
 
-        // Players depuis Redis (contient isAlive, isAI, nickname)
+        // Infos utilisateur courant
+        $isCreator = false;
+        $myUserId = null;
+        $currentUser = $this->getUser();
+        if ($currentUser) {
+            $myUserId = $currentUser->getId()->toString();
+            $creatorId = $redis->get("game:{$identifier}:creator");
+            $isCreator = $creatorId !== null && $creatorId === $myUserId;
+        }
+
+        // Players depuis Redis
         $playersRaw = $redis->hgetall("game:{$identifier}:players") ?: [];
         $players = [];
         foreach ($playersRaw as $playerId => $playerJson) {
@@ -344,7 +355,7 @@ class GameController extends AbstractController
                 'id'       => $playerId,
                 'nickname' => $p['nickname'] ?? 'Joueur',
                 'isAlive'  => $isAlive,
-                'isAI'     => $isAlive ? false : ($p['isAI'] ?? false), // révélé seulement après élimination
+                'isAI'     => $isAlive ? false : ($p['isAI'] ?? false), 
             ];
         }
 
@@ -358,7 +369,6 @@ class GameController extends AbstractController
             $revoteCandidates = null;
             $eliminatedPlayerId = null;
 
-            // Réponses visibles en phase vote et après
             if (in_array($status, ['en_attente_votes', 'termine'])) {
                 $responsesRaw = $redis->hgetall("game:{$identifier}:round:reponses") ?: [];
                 $answers = [];
@@ -366,17 +376,14 @@ class GameController extends AbstractController
                     $r = json_decode($rJson, true);
                     $answers[] = ['playerId' => $pid, 'text' => $r['reponse'] ?? ''];
                 }
-                // Tri cohérent pour que le front puisse shuffler une seule fois
                 usort($answers, fn($a, $b) => strcmp($a['playerId'], $b['playerId']));
             }
 
-            // Candidats au revote
             $revoteRaw = $redis->get("game:{$identifier}:round:revote");
             if ($revoteRaw) {
                 $revoteCandidates = json_decode($revoteRaw, true);
             }
 
-            // Joueur éliminé (depuis la DB après appel /eliminate)
             $roundEntity = $this->roundRepository->find($roundRaw['roundId']);
             if ($roundEntity && $roundEntity->getEliminatedPlayer()) {
                 $eliminatedPlayerId = $roundEntity->getEliminatedPlayer()->getId()->toString();
@@ -399,15 +406,22 @@ class GameController extends AbstractController
             ];
         }
 
+        // Vérification abandon (joueur parti en cours de partie)
+        $abandoned = $redis->get("game:{$identifier}:abandoned") !== null
+            && $game->getStatus()->value === 'in_progress';
+
         return $this->json([
             'success' => true,
             'game' => [
-                'id'      => $game->getId()->toString(),
-                'code'    => $game->getCode(),
-                'status'  => $game->getStatus()->value,
-                'winner'  => $game->getWinnerType()?->value,
-                'players' => $players,
-                'round'   => $roundData,
+                'id'        => $game->getId()->toString(),
+                'code'      => $game->getCode(),
+                'status'    => $game->getStatus()->value,
+                'winner'    => $game->getWinnerType()?->value,
+                'isCreator' => $isCreator,
+                'myUserId'  => $myUserId,
+                'abandoned' => $abandoned,
+                'players'   => $players,
+                'round'     => $roundData,
             ]
         ]);
     }
@@ -442,6 +456,101 @@ class GameController extends AbstractController
                 return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
             }
 
+    #[Route('/active', name: 'api_game_active', methods: ['GET'])]
+    #[OA\Get(path: '/api/game/active', summary: 'Retourne la partie active de l\'utilisateur connecté', tags: ['Game'])]
+    #[OA\Response(response: 200, description: 'Code de partie active ou null')]
+    public function getActiveGame(): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['success' => false, 'error' => 'NON_AUTHENTIFIE'], 401);
+        }
+
+        $redis = $this->gameRedisService->getRedis();
+        $code = $redis->get('user:' . $user->getId()->toString() . ':activeGame');
+
+        if (!$code) {
+            return $this->json(['success' => true, 'code' => null]);
+        }
+
+        // Vérifie que la partie existe encore et est active
+        $game = $this->gameRepository->findOneBy(['code' => $code]);
+        if (!$game || $game->getStatus()->value === 'finished') {
+            $redis->del(['user:' . $user->getId()->toString() . ':activeGame']);
+            return $this->json(['success' => true, 'code' => null]);
+        }
+
+        return $this->json(['success' => true, 'code' => $code, 'isCreator' => $redis->get("game:{$code}:creator") === $user->getId()->toString()]);
+    }
+
+    #[Route('/{code}/leave', name: 'api_game_leave', methods: ['POST'])]
+    #[OA\Post(path: '/api/game/{code}/leave', summary: 'Quitter la partie (force retour accueil pour tous)', tags: ['Game'])]
+    #[OA\Response(response: 200, description: 'Partie marquée abandonnée')]
+    public function leaveGame(string $code): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['success' => false, 'error' => 'NON_AUTHENTIFIE'], 401);
+        }
+
+        $game = $this->gameRepository->findOneBy(['code' => $code]);
+        if (!$game || $game->getStatus()->value !== 'in_progress') {
+            return $this->json(['success' => true], 200); 
+        }
+
+        $this->gameRedisService->getRedis()->setex("game:{$code}:abandoned", 86400, $user->getId()->toString());
+
+        return $this->json(['success' => true], 200);
+    }
+
+    #[Route('/{code}/restart', name: 'api_game_restart', methods: ['POST'])]
+    #[OA\Post(path: '/api/game/{code}/restart', summary: 'Relancer la partie (même code)', tags: ['Game'])]
+    #[OA\Response(response: 200, description: 'Partie réinitialisée')]
+    #[OA\Response(response: 401, description: 'Non authentifié')]
+    #[OA\Response(response: 404, description: 'Partie introuvable')]
+    public function restartGame(string $code): JsonResponse
+    {
+        if (!$this->getUser()) {
+            return $this->json(['success' => false, 'error' => 'NON_AUTHENTIFIE'], 401);
+        }
+
+        $game = $this->gameRepository->findOneBy(['code' => $code]);
+        if (!$game) {
+            return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+        }
+
+        try {
+            $this->gameService->restartGame($game);
+            return $this->json(['success' => true], 200);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'error' => 'ERREUR_SERVEUR'], 500);
+        }
+    }
+
+    #[Route('/{code}/delete', name: 'api_game_delete', methods: ['POST'])]
+    #[OA\Post(path: '/api/game/{code}/delete', summary: 'Supprimer la partie et son code', tags: ['Game'])]
+    #[OA\Response(response: 200, description: 'Partie supprimée')]
+    #[OA\Response(response: 401, description: 'Non authentifié')]
+    #[OA\Response(response: 404, description: 'Partie introuvable')]
+    public function deleteGame(string $code): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['success' => false, 'error' => 'NON_AUTHENTIFIE'], 401);
+        }
+
+        $game = $this->gameRepository->findOneBy(['code' => $code]);
+        if (!$game) {
+            return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+        }
+
+        // Seul le créateur peut supprimer la partie
+        $creatorId = $this->gameRedisService->getRedis()->get("game:{$code}:creator");
+        if ($creatorId !== null && $creatorId !== $user->getId()->toString()) {
+            return $this->json(['success' => false, 'error' => 'NON_AUTORISE'], 403);
+        }
+
+        try {
             $this->gameService->deleteGame($game);
             return $this->json(['success' => true], 200);
         } catch (\Exception $e) {

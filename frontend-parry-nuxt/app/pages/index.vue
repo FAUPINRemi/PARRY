@@ -1,10 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const { emitEvent } = useTerminal()
 const { apiFetch } = useApi()
 const router = useRouter()
+
+onMounted(async () => {
+	try {
+		const res = await apiFetch('/api/game/active')
+		if (res.ok) {
+			const data = await res.json()
+			if (data.success && data.code) {
+				router.push({ path: '/game', query: { code: data.code } })
+			}
+		}
+	} catch { /* pas de partie active */ }
+})
 
 const gameInfo = ref<{ code?: string; id?: string; isPrivate?: boolean; status?: string } | null>(null)
 const loading = ref(false)
@@ -18,14 +30,9 @@ async function createGame() {
 	error.value = null
 
 	try {
-		const jwt = process.client ? localStorage.getItem('jwt') : null
-
 		const res = await apiFetch('/api/game/create', {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				...(jwt ? { Authorization: `Bearer ${jwt}` } : {})
-			},
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ isPrivate: true })
 		})
 
@@ -36,16 +43,15 @@ async function createGame() {
 			const code = data.game.code || data.game.id
 			if (code) {
 				emitEvent({ message: `Salon créé ! Code : ${code}`, type: 'success' })
-				localStorage.setItem(`parry_creator_${code}`, '1')
 				router.push({ path: '/game', query: { code } })
 			}
 		} else {
 			error.value = data.error || 'Erreur inconnue'
-			emitEvent({ message: error.value, type: 'error' })
+			emitEvent({ message: error.value ?? 'Erreur', type: 'error' })
 		}
 	} catch {
 		error.value = 'Erreur réseau'
-		emitEvent({ message: error.value, type: 'error' })
+		emitEvent({ message: error.value ?? 'Erreur', type: 'error' })
 	} finally {
 		loading.value = false
 	}
