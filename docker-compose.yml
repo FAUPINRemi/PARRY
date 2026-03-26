@@ -56,6 +56,12 @@ services:
       SERVER_NAME: ":80"
       MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_SECRET_PUBLISHER}"
       MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_SECRET_SUBSCRIBER}"
+      MERCURE_EXTRA_DIRECTIVES: |
+        anonymous
+        cors_origins http://10.255.0.19
+      CADDY_SERVER_EXTRA_DIRECTIVES: |
+        header Access-Control-Allow-Origin "http://10.255.0.19"
+        header Access-Control-Allow-Credentials "true"
     ports:
       - "${MERCURE_PORT}:80"
 
