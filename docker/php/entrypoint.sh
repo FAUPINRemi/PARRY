@@ -1,22 +1,23 @@
 #!/bin/sh
 set -e
 
-# Installer/mettre à jour les dépendances automatiquement
 echo "Vérification des dépendances Composer..."
-composer update --no-interaction
+composer install --no-interaction --prefer-dist --no-progress
 
-# Attendre que la base de données soit prête
-echo "Chargement bdd"
-until pg_isready -h db -p 5432 -U parry; do
-  echo "BDD indisponible"
-  sleep 1 
+echo "Attente de la base de données..."
+until pg_isready -h db -p 5432 -U parry > /dev/null 2>&1; do
+  echo "BDD indisponible, nouvelle tentative..."
+  sleep 2 
 done
-echo "Base de donnée ok "
 
-# Lancer les migrations Doctrine
-php bin/console doctrine:migrations:migrate --no-interaction || true
+echo "Base de données prête, attente supplémentaire..."
+sleep 3
 
-# Démarrer le serveur de développement Symfony sur le port 8000
-# PHP_CLI_SERVER_WORKERS permet plusieurs workers concurrents (PHP >= 7.4)
+php bin/console doctrine:database:create --if-not-exists 2>/dev/null || true
+
+echo "Exécution des migrations..."
+php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+
+echo "Démarrage du serveur Symfony..."
 export PHP_CLI_SERVER_WORKERS=8
 exec php -S 0.0.0.0:8000 -t public

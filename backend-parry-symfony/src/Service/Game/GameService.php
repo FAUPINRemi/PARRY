@@ -165,19 +165,36 @@ class GameService
 
         // Supprimer les clés Redis
         $redis = $this->gameRedisService->getRedis();
-        $redis->del("game:{$gameIdentifier}:players");
-        $redis->del("game:{$gameIdentifier}:round");
-        $redis->del("game:{$gameIdentifier}:round:reponses");
-        $redis->del("game:{$gameIdentifier}:round:votes");
-        $redis->del("game:{$gameIdentifier}:round:revote");
-        $redis->del("game:{$gameIdentifier}:proai");
-        $redis->del("game:{$gameIdentifier}:creator");
+        $keys = [
+            "game:{$gameIdentifier}",
+            "game:{$gameIdentifier}:players",
+            "game:{$gameIdentifier}:round",
+            "game:{$gameIdentifier}:round:reponses",
+            "game:{$gameIdentifier}:round:votes",
+            "game:{$gameIdentifier}:round:revote",
+            "game:{$gameIdentifier}:proai",
+            "game:{$gameIdentifier}:creator",
+        ];
+        foreach ($keys as $key) {
+            $redis->del([$key]);
+        }
 
         if ($game->getCode()) {
-            $redis->del("game:code:{$game->getCode()}");
+            $redis->del(["game:code:{$game->getCode()}"]);
+        }
+
+        // Nettoyage des références utilisateurs (activeGame)
+        foreach ($game->getPlayers() as $player) {
+            if (!in_array('ROLE_AI', $player->getRoles())) {
+                $redis->del(['user:' . $player->getId()->toString() . ':activeGame']);
+            }
         }
 
         // Supprimer l'entité en base de données
+        $this->entityManager->remove($game);
+        $this->entityManager->flush();
+    }
+
     public function restartGame(Game $game): void
     {
         $identifier = $game->getCode() ?? $game->getId()->toString();
@@ -224,36 +241,5 @@ class GameService
         // Reset statut Redis
         $redis->hset("game:{$identifier}", 'status', 'waiting');
         $redis->hset("game:{$identifier}", 'currentRound', 0);
-    }
-
-    public function deleteGame(Game $game): void
-    {
-        $identifier = $game->getCode() ?? $game->getId()->toString();
-        $redis = $this->gameRedisService->getRedis();
-
-        $keys = [
-            "game:{$identifier}",
-            "game:{$identifier}:players",
-            "game:{$identifier}:round",
-            "game:{$identifier}:round:reponses",
-            "game:{$identifier}:round:votes",
-            "game:{$identifier}:round:revote",
-            "game:{$identifier}:proai",
-        ];
-        foreach ($keys as $key) {
-            $redis->del([$key]);
-        }
-        if ($game->getCode()) {
-            $redis->del(["game:code:{$game->getCode()}"]);
-        }
-
-        foreach ($game->getPlayers() as $player) {
-            if (!in_array('ROLE_AI', $player->getRoles())) {
-                $redis->del(['user:' . $player->getId()->toString() . ':activeGame']);
-            }
-        }
-
-        $this->entityManager->remove($game);
-        $this->entityManager->flush();
     }
 }

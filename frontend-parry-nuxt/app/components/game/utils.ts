@@ -14,23 +14,20 @@ export function playerAlias(
 ): string {
 	if (!playerId) return '???'
 
-	const p = players.find(p => p.id === playerId)
-	if (p?.isAI) return 'IA'
-
-	const humanIds = players
-		.filter(p => !p.isAI)
+	const visibleIds = players
 		.map(p => p.id)
 		.sort()
 
-	const idx = humanIds.indexOf(playerId)
-	return idx >= 0 ? ALIASES[idx % ALIASES.length] : '???'
+	const idx = visibleIds.indexOf(playerId)
+	return idx >= 0 ? (ALIASES[idx % ALIASES.length] ?? '???') : '???'
 }
 
 export function jwt() {
-	return process.client ? localStorage.getItem('jwt') : null
+	if (typeof window === 'undefined') return null
+	return localStorage.getItem('jwt')
 }
 
-export function authHeaders() {
+export function authHeaders(): Record<string, string> {
 	const t = jwt()
 	return t ? { Authorization: `Bearer ${t}` } : {}
 }

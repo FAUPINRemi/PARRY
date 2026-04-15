@@ -57,6 +57,7 @@ export function useGame() {
 
 	const roundCreating = ref(false)
 	const eliminationDone = ref(false)
+	const eliminationInFlight = ref(false)
 	const victoryChecked = ref(false)
 
 	let aiTriggerRound = ''
@@ -67,12 +68,12 @@ export function useGame() {
 
 	const isMyTurnToAsk = computed(() => questionMasterId.value === myUserId.value)
 
-	const alivePlayers = computed(() => players.value.filter(p => p.isAlive))
-	const deadPlayers = computed(() => players.value.filter(p => !p.isAlive))
+	const alivePlayers = computed(() => players.value.filter((p: Player) => p.isAlive))
+	const deadPlayers = computed(() => players.value.filter((p: Player) => !p.isAlive))
 
 	const amIAlive = computed(() => {
 		if (!myUserId.value) return true
-		const me = players.value.find(p => p.id === myUserId.value)
+		const me = players.value.find((p: Player) => p.id === myUserId.value)
 		return me ? me.isAlive : true
 	})
 
@@ -82,16 +83,30 @@ export function useGame() {
 
 	let pollInterval: ReturnType<typeof setInterval> | null = null
 
+	async function cancelGameAndReturnHome(message: string) {
+		if (pollInterval) {
+			clearInterval(pollInterval)
+			pollInterval = null
+		}
+		mercureDisconnect()
+		emitEvent({ message, type: 'error' })
+		setGameInfo(null)
+		await new Promise(r => setTimeout(r, 300))
+		await router.push('/')
+	}
+
 	async function fetchGameState() {
 		try {
 			const res = await apiFetch(`/api/game/${gameCode.value}/state`, { headers: authHeaders() })
 			if (res.status === 401) {
 				if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+				mercureDisconnect()
 				await router.push('/')
 				return
 			}
 			if (res.status === 404) {
 				if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+				mercureDisconnect()
 				await router.push('/')
 				return
 			}
@@ -102,10 +117,12 @@ export function useGame() {
 
 			// Un joueur a quitté en cours de partie → retour accueil pour tous
 			if (data.game.abandoned === true) {
-				if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
-				emitEvent({ message: 'Un joueur a quitté la partie.', type: 'error' })
-				setGameInfo(null)
-				await router.push('/')
+				const reason = data.game.abandonedReason
+				await cancelGameAndReturnHome(
+					reason === 'ai_crash'
+						? "L'IA a planté, la partie est annulée."
+						: 'Un joueur a quitté la partie.'
+				)
 				return
 			}
 
@@ -113,6 +130,7 @@ export function useGame() {
 			const prevRoundStatus = roundStatus.value
 			const prevRoundId = roundId.value
 			const prevAnsweredCount = answeredCount.value
+			const prevRevoteCandidates = revoteCandidates.value
 
 			gameStatus.value = data.game.status
 			players.value = data.game.players || []
@@ -141,6 +159,18 @@ export function useGame() {
 				revoteCandidates.value = r.revoteCandidates || null
 				eliminatedPlayerId.value = r.eliminatedPlayerId || null
 
+				const revoteActivated =
+					(prevRevoteCandidates === null && revoteCandidates.value !== null)
+					|| (
+						prevRevoteCandidates !== null
+						&& revoteCandidates.value !== null
+						&& JSON.stringify(prevRevoteCandidates) !== JSON.stringify(revoteCandidates.value)
+					)
+
+				if (revoteActivated) {
+					hasVoted.value = false
+				}
+
 				if (prevRoundId !== null && prevRoundId !== r.id) {
 					answersLocked.value = false
 					eliminationDone.value = false
@@ -160,6 +190,21 @@ export function useGame() {
 				}
 			} else {
 				roundStatus.value = null
+			}
+
+			if (isCreator.value && roundStatus.value === 'termine' && roundId.value) {
+				if (!eliminatedPlayerId.value && !eliminationInFlight.value) {
+					runElimination()
+				} else if (eliminatedPlayerId.value && !victoryChecked.value) {
+					const eliminated = players.value.find((p: Player) => p.id === eliminatedPlayerId.value)
+					if (!eliminated?.isAI) {
+						victoryChecked.value = true
+						const ok = await checkVictory()
+						if (!ok) {
+							victoryChecked.value = false
+						}
+					}
+				}
 			}
 
 			setGameInfo({
@@ -254,13 +299,17 @@ export function useGame() {
 
 			if (isCreator.value) triggerAI()
 		} else if (status === 'en_attente_votes') {
+			if (prev === 'termine') {
+				hasVoted.value = false
+				emitEvent({ message: 'Égalité détectée, revote en cours.', type: 'info' })
+			}
+
 			setTerminalAction(null)
 			emitEvent({ message: 'Phase de vote : quelle réponse semble la plus suspecte ?', type: 'info' })
 			if (isCreator.value) triggerAI()
 		} else if (status === 'termine') {
 			setTerminalAction(null)
-			if (isCreator.value && !eliminationDone.value) {
-				eliminationDone.value = true
+			if (isCreator.value && !eliminationDone.value && !eliminationInFlight.value) {
 				runElimination()
 			}
 		}
@@ -299,12 +348,30 @@ export function useGame() {
 				headers: { 'Content-Type': 'application/json', ...authHeaders() }
 			})
 
+			const data = await res.json().catch(() => ({}))
+
+			if (res.ok) {
+				if (data.noop === true) {
+					return
+				}
+
+				if (data.success !== false) {
+					return
+				}
+			}
+
+			if (data.cancelled === true || data.reason === 'AI_CRASH') {
+				await cancelGameAndReturnHome("L'IA a planté, la partie est annulée.")
+				return
+			}
+
+			emitEvent({
+				message: `IA erreur (${res.status}): ${data.details ?? data.error ?? ''}`,
+				type: 'error'
+			})
+
 			if (!res.ok) {
-				const data = await res.json().catch(() => ({}))
-				emitEvent({
-					message: `IA erreur (${res.status}): ${data.details ?? data.error ?? ''}`,
-					type: 'error'
-				})
+				await fetchGameState()
 			}
 		} catch {
 		}
@@ -312,6 +379,9 @@ export function useGame() {
 
 	async function runElimination() {
 		if (!roundId.value) return
+		if (eliminationInFlight.value) return
+
+		eliminationInFlight.value = true
 
 		try {
 			const res = await apiFetch(`/api/round/${roundId.value}/eliminate`, {
@@ -323,14 +393,16 @@ export function useGame() {
 
 			if (data.revote) {
 				emitEvent({ message: 'Égalité ! Revote en cours...', type: 'info' })
+				hasVoted.value = false
 				eliminationDone.value = false
 			} else if (data.eliminatedPlayerId) {
-				const eliminated = players.value.find(p => p.id === data.eliminatedPlayerId)
+				eliminationDone.value = true
+				const eliminated = players.value.find((p: Player) => p.id === data.eliminatedPlayerId)
 				emitEvent({ message: `${eliminated?.nickname ?? 'Un joueur'} a été éliminé !`, type: 'error' })
 
 				await fetchGameState()
 
-				const eliminatedAfterFetch = players.value.find(p => p.id === data.eliminatedPlayerId)
+				const eliminatedAfterFetch = players.value.find((p: Player) => p.id === data.eliminatedPlayerId)
 				if (eliminatedAfterFetch?.isAI) {
 					try {
 						await apiFetch(`/api/game/${gameCode.value}/check-victory`, {
@@ -346,15 +418,23 @@ export function useGame() {
 
 				if (!victoryChecked.value) {
 					victoryChecked.value = true
-					await checkVictory()
+					const ok = await checkVictory()
+					if (!ok) {
+						victoryChecked.value = false
+					}
 				}
+			} else {
+				eliminationDone.value = false
 			}
 		} catch {
+			eliminationDone.value = false
 			emitEvent({ message: 'Erreur réseau (élimination)', type: 'error' })
+		} finally {
+			eliminationInFlight.value = false
 		}
 	}
 
-	async function checkVictory() {
+	async function checkVictory(): Promise<boolean> {
 		try {
 			const res = await apiFetch(`/api/game/${gameCode.value}/check-victory`, {
 				method: 'POST',
@@ -366,6 +446,7 @@ export function useGame() {
 			if (data.gameOver === true) {
 				winner.value = data.winner
 				await fetchGameState()
+				return true
 			} else if (data.gameOver === false) {
 				await apiFetch(`/api/round/${roundId.value}/finish`, {
 					method: 'POST',
@@ -376,10 +457,13 @@ export function useGame() {
 					roundCreating.value = true
 					createNewRound()
 				}, 4000)
+				return true
 			}
 		} catch {
 			emitEvent({ message: 'Erreur réseau (victoire)', type: 'error' })
 		}
+
+		return false
 	}
 
 	async function startGame() {
@@ -557,7 +641,7 @@ export function useGame() {
 
 		myUserId.value = localStorage.getItem('userId')
 
-		if (process.client) {
+		if (typeof window !== 'undefined') {
 			window.addEventListener('beforeunload', sendLeaveBeacon)
 		}
 
@@ -593,7 +677,8 @@ export function useGame() {
 		mercureDisconnect()
 		if (handleBeforeUnload) {
 			window.removeEventListener('beforeunload', handleBeforeUnload)
-		if (process.client) {
+		}
+		if (typeof window !== 'undefined') {
 			window.removeEventListener('beforeunload', sendLeaveBeacon)
 		}
 		setTerminalAction(null)

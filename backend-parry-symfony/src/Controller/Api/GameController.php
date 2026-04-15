@@ -72,6 +72,10 @@ class GameController extends AbstractController
         try {
             $game = $this->gameService->createGame($isPrivate, $creator?->getId()?->toString());
             
+            if ($creator) {
+                $this->gameService->joinGame($game, $creator);
+            }
+            
             return $this->json([
                 'success' => true,
                 'game' => [
@@ -355,7 +359,7 @@ class GameController extends AbstractController
                 'id'       => $playerId,
                 'nickname' => $p['nickname'] ?? 'Joueur',
                 'isAlive'  => $isAlive,
-                'isAI'     => $isAlive ? false : ($p['isAI'] ?? false), 
+                'isAI'     => (bool)($p['isAI'] ?? false),
             ];
         }
 
@@ -406,8 +410,9 @@ class GameController extends AbstractController
             ];
         }
 
-        // Vérification abandon (joueur parti en cours de partie)
-        $abandoned = $redis->get("game:{$identifier}:abandoned") !== null
+        // Vérification abandon (joueur parti en cours de partie ou crash IA)
+        $abandonedBy = $redis->get("game:{$identifier}:abandoned");
+        $abandoned = $abandonedBy !== null
             && $game->getStatus()->value === 'in_progress';
 
         return $this->json([
@@ -420,42 +425,12 @@ class GameController extends AbstractController
                 'isCreator' => $isCreator,
                 'myUserId'  => $myUserId,
                 'abandoned' => $abandoned,
+                'abandonedReason' => $abandoned ? $abandonedBy : null,
                 'players'   => $players,
                 'round'     => $roundData,
             ]
         ]);
     }
-
-    #[Route('/{code}/delete', name: 'api_game_delete', methods: ['POST'])]
-    #[OA\Post(
-        path: '/api/game/{code}/delete',
-        summary: 'Supprimer une partie (déconnexion du créateur)',
-        tags: ['Game']
-    )]
-    #[OA\Parameter(
-        name: 'code',
-        in: 'path',
-        required: true,
-        description: 'Code de la partie',
-        schema: new OA\Schema(type: 'string', example: 'ABC123')
-    )]
-    #[OA\Response(
-        response: 200,
-        description: 'Partie supprimée',
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: true)
-            ]
-        )
-    )]
-    #[OA\Response(response: 404, description: 'Partie introuvable')]
-    public function deleteGame(string $code): JsonResponse {
-        try {
-            $game = $this->gameRepository->findOneBy(['code' => $code]);
-            if (!$game) {
-                return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
-            }
-
     #[Route('/active', name: 'api_game_active', methods: ['GET'])]
     #[OA\Get(path: '/api/game/active', summary: 'Retourne la partie active de l\'utilisateur connecté', tags: ['Game'])]
     #[OA\Response(response: 200, description: 'Code de partie active ou null')]
@@ -475,7 +450,11 @@ class GameController extends AbstractController
 
         // Vérifie que la partie existe encore et est active
         $game = $this->gameRepository->findOneBy(['code' => $code]);
-        if (!$game || $game->getStatus()->value === 'finished') {
+        if (
+            !$game ||
+            $game->getStatus()->value === 'finished' ||
+            $redis->get("game:{$code}:abandoned") !== null
+        ) {
             $redis->del(['user:' . $user->getId()->toString() . ':activeGame']);
             return $this->json(['success' => true, 'code' => null]);
         }
@@ -484,8 +463,8 @@ class GameController extends AbstractController
     }
 
     #[Route('/{code}/leave', name: 'api_game_leave', methods: ['POST'])]
-    #[OA\Post(path: '/api/game/{code}/leave', summary: 'Quitter la partie (force retour accueil pour tous)', tags: ['Game'])]
-    #[OA\Response(response: 200, description: 'Partie marquée abandonnée')]
+    #[OA\Post(path: '/api/game/{code}/leave', summary: 'Quitter la partie (créateur: arrêt total, joueur: retrait)', tags: ['Game'])]
+    #[OA\Response(response: 200, description: 'Sortie traitée')]
     public function leaveGame(string $code): JsonResponse
     {
         $user = $this->getUser();
@@ -494,13 +473,31 @@ class GameController extends AbstractController
         }
 
         $game = $this->gameRepository->findOneBy(['code' => $code]);
-        if (!$game || $game->getStatus()->value !== 'in_progress') {
-            return $this->json(['success' => true], 200); 
+        if (!$game) {
+            $this->gameRedisService->getRedis()->del(['user:' . $user->getId()->toString() . ':activeGame']);
+            return $this->json(['success' => true], 200);
         }
 
-        $this->gameRedisService->getRedis()->setex("game:{$code}:abandoned", 86400, $user->getId()->toString());
+        $redis = $this->gameRedisService->getRedis();
+        $userId = $user->getId()->toString();
+        $creatorId = $redis->get("game:{$code}:creator");
 
-        return $this->json(['success' => true], 200);
+        // Si le créateur se déconnecte, la partie est arrêtée pour tout le monde
+        if ($creatorId !== null && $creatorId === $userId) {
+            $this->gameService->deleteGame($game);
+            return $this->json(['success' => true, 'stopped' => true], 200);
+        }
+
+        // Joueur standard : on le retire simplement de la partie
+        if ($game->getPlayers()->contains($user)) {
+            $game->removePlayer($user);
+            $this->entityManager->flush();
+        }
+
+        $redis->hdel("game:{$code}:players", [$userId]);
+        $redis->del(['user:' . $userId . ':activeGame']);
+
+        return $this->json(['success' => true, 'removed' => true], 200);
     }
 
     #[Route('/{code}/restart', name: 'api_game_restart', methods: ['POST'])]

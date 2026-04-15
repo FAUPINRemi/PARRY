@@ -47,7 +47,6 @@ const statusLabel = (status: string) =>
 										<span>{{ p.isAlive ? '●' : '○' }}</span>
 						{{ aliasForPanel(p.id, gameInfo.players, gameInfo.myUserId) }}
 						<span v-if="p.id === gameInfo.myUserId" class="tag-me">(moi)</span>
-						<span v-if="p.isAI" class="tag-ai">IA</span>
 					</li>
 				</ul>
 			</div>

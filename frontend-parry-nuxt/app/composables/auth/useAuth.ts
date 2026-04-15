@@ -91,6 +91,24 @@ export function useAuth() {
 		error.value = null
 
 		try {
+			const { gameInfo, setGameInfo } = useGameInfo()
+			const gameCode = gameInfo.value?.code
+			if (gameCode) {
+				const leaveHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+				if (typeof window !== 'undefined') {
+					const token = localStorage.getItem('jwt')
+					if (token) {
+						leaveHeaders.Authorization = `Bearer ${token}`
+					}
+				}
+
+				await apiFetch(`/api/game/${gameCode}/leave`, {
+					method: 'POST',
+					headers: leaveHeaders,
+				}).catch(() => {})
+				setGameInfo(null)
+			}
+
 			const res = await apiFetch('/api/logout', { method: 'POST' })
 			if (res.ok || res.status === 401) {
 				connectedPseudo.value = null

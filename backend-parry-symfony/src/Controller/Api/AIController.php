@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 use App\Enum\GameStatus;
 use App\Repository\GameRepository;
 use App\Service\AI\AIJoueurService;
+use App\Service\GameRedisService;
 use Doctrine\ORM\EntityManagerInterface;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -17,7 +18,8 @@ class AIController extends AbstractController
 {
     public function __construct(
         private GameRepository $gameRepository,
-        private EntityManagerInterface $em
+        private EntityManagerInterface $em,
+        private GameRedisService $gameRedisService
     ) {}
 
     #[Route('/play/{gameCode}', name: 'ai_play', methods: ['POST'])]
@@ -70,9 +72,28 @@ class AIController extends AbstractController
                 'success' => true,
                 'message' => 'L\'IA a joué son action'
             ]);
-            
-        } catch (\Exception $e) {
+        } catch (\RuntimeException $e) {
             return $this->json([
+                'success' => true,
+                'noop' => true,
+                'message' => $e->getMessage()
+            ], Response::HTTP_OK);
+        } catch (\Throwable $e) {
+            $redis = $this->gameRedisService->getRedis();
+            $identifier = $game->getCode() ?? $game->getId()->toString();
+
+            $redis->setex("game:{$identifier}:abandoned", 86400, 'ai_crash');
+
+            foreach ($game->getPlayers() as $player) {
+                if (!in_array('ROLE_AI', $player->getRoles(), true)) {
+                    $redis->del(['user:' . $player->getId()->toString() . ':activeGame']);
+                }
+            }
+
+            return $this->json([
+                'success' => false,
+                'cancelled' => true,
+                'reason' => 'AI_CRASH',
                 'error' => 'Erreur lors de l\'action de l\'IA',
                 'details' => $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);

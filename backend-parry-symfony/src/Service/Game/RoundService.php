@@ -263,6 +263,8 @@ class RoundService
             $this->gameRedisService->getRedis()->setex("game:{$gameIdentifier}:round:revote", 3600, json_encode($joueurMaxVotes));
             $this->gameRedisService->getRedis()->hset("game:{$gameIdentifier}:round", 'status', 'en_attente_votes');
             $this->gameRedisService->getRedis()->del("game:{$gameIdentifier}:round:votes");
+
+            $this->mercurePublisher->publish("/game/{$gameIdentifier}", ['event' => 'state_changed']);
             return null;
         }
 

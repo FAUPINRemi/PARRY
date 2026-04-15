@@ -5,8 +5,8 @@ export default defineNuxtConfig({
   modules: ["@nuxt/fonts", "@nuxt/icon"],
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:8000",
-      mercurePublicUrl: process.env.NUXT_PUBLIC_MERCURE_URL || "http://localhost:3000/.well-known/mercure",
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || "",
+      mercurePublicUrl: process.env.NUXT_PUBLIC_MERCURE_URL || "/.well-known/mercure",
     },
   },
   fonts: {
