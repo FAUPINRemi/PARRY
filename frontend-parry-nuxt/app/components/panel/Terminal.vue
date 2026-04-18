@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 
-const { onEvent, terminalAction, submitTerminalInput } = useTerminal()
+const { onEvent, terminalAction, submitTerminalInput, emitEvent } = useTerminal()
+const { micEnabled, isRecording, isTranscribing, startRecording, stopAndTranscribe } = useMicrophone()
 
 const messages = ref<string[]>([])
 const inputValue = ref('')
@@ -31,6 +32,21 @@ function handleSubmit() {
   submitTerminalInput(terminalAction.value.type, val)
   inputValue.value = ''
 }
+
+async function handleMic() {
+  if (isTranscribing.value) return
+
+  if (isRecording.value) {
+    try {
+      const text = await stopAndTranscribe()
+      if (text) inputValue.value = text
+    } catch {
+      emitEvent({ message: 'Transcription échouée, réessayez.', type: 'error' })
+    }
+  } else {
+    await startRecording()
+  }
+}
 </script>
 
 <template>
@@ -43,11 +59,23 @@ function handleSubmit() {
       <input
         v-model="inputValue"
         class="terminal-input"
-        :placeholder="terminalAction.placeholder"
+        :placeholder="isTranscribing ? 'Transcription...' : terminalAction.placeholder"
+        :disabled="isTranscribing"
         autocomplete="off"
         @keyup.enter="handleSubmit"
       />
-      <button class="gButton important" @click="handleSubmit">Envoyer</button>
+      <button
+        v-if="micEnabled"
+        class="gButton mic-btn"
+        :class="{ 'mic-btn--recording': isRecording, 'mic-btn--loading': isTranscribing }"
+        :disabled="isTranscribing"
+        @click="handleMic"
+      >
+        <Icon v-if="isTranscribing" name="pixelarticons:refresh" />
+        <Icon v-else-if="isRecording" name="pixelarticons:close" />
+        <Icon v-else name="pixelarticons:mic" />
+      </button>
+      <button class="gButton important" :disabled="isTranscribing" @click="handleSubmit">Envoyer</button>
     </div>
   </Panel>
 </template>

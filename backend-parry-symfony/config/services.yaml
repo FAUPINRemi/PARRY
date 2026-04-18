@@ -22,6 +22,15 @@ services:
             $budgetGuard: '@App\Service\AI\BudgetGuard'
             $logger: '@logger'
 
+    App\Service\AI\GeminiTTSService:
+        lazy: true
+        arguments:
+            $apiUrl: '%env(GEMINI_API_URL)%'
+            $apiKey: '%env(GEMINI_API_KEY)%'
+            $ttsModel: '%env(GEMINI_TTS_MODEL)%'
+            $budgetGuard: '@App\Service\AI\BudgetGuard'
+            $logger: '@logger'
+
     # On passe TOUS les services liés à l'IA en Lazy
     # Symfony ne créera ces objets que si la méthode playAI est appelée
     App\Service\AI\AIOrchestrator: { lazy: true }

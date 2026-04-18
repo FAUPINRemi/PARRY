@@ -88,6 +88,46 @@
   font-size: 0.75rem;
 }
 
+/* --- micro section (salon d'attente) --- */
+.hub-mic-section {
+  margin-bottom: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.mic-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.mic-hint {
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.mic-error {
+  color: #f44336;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.tts-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.tts-hint {
+  color: #888;
+  font-size: 0.75rem;
+}
+
 /* --- */
 .phase-box {
   padding: 1rem;

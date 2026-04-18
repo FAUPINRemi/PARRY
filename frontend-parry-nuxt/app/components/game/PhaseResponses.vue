@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
+
 const props = defineProps<{
 	roundNumber: number
 	question: string
@@ -6,6 +8,12 @@ const props = defineProps<{
 	answeredCount: number
 	totalAlive: number
 }>()
+
+const { speak } = useTTS()
+
+onMounted(() => {
+	if (props.question) speak(props.question)
+})
 </script>
 
 <template>

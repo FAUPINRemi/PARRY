@@ -24,15 +24,20 @@ class RateLimitSubscriber implements EventSubscriberInterface
     ];
 
     private const EXCLUDED_POST_SUFFIXES = [
-        '/start',         
-        '/create',         
-        '/eliminate',     
-        '/finish',         
-        '/check-victory',  
-        '/delete',         
-        '/restart',       
-        '/delete',         
-        '/leave',          
+        '/start',
+        '/create',
+        '/eliminate',
+        '/finish',
+        '/check-victory',
+        '/delete',
+        '/restart',
+        '/leave',
+    ];
+
+    private const EXCLUDED_POST_EXACT = [
+        '/api/logout',
+        '/api/stt',
+        '/api/tts',
     ];
 
     private const EXCLUDED_GET_EXACT = [
@@ -81,6 +86,11 @@ class RateLimitSubscriber implements EventSubscriberInterface
 
         // Exclure les actions d'orchestration POST (créateur uniquement)
         if ($request->getMethod() === 'POST') {
+            foreach (self::EXCLUDED_POST_EXACT as $exact) {
+                if ($path === $exact) {
+                    return;
+                }
+            }
             foreach (self::EXCLUDED_POST_SUFFIXES as $suffix) {
                 if (str_ends_with($path, $suffix)) {
                     return;

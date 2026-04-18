@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
 interface Player {
 	id: string
 	nickname: string
@@ -23,6 +25,32 @@ function onToggle(e: Event) {
 	const target = e.target as HTMLInputElement
 	emit('update:enableProAI', target.checked)
 }
+
+const { micEnabled, requestPermission, disableMic } = useMicrophone()
+const micError = ref('')
+
+const { ttsEnabled } = useTTS()
+
+const isSecureContext = import.meta.client ? window.isSecureContext : true
+
+async function onMicToggle(e: Event) {
+	const checked = (e.target as HTMLInputElement).checked
+	micError.value = ''
+
+	if (checked) {
+		if (!isSecureContext) {
+			micError.value = 'Le micro nécessite HTTPS. Disponible une fois le SSL activé sur le serveur.'
+			;(e.target as HTMLInputElement).checked = false
+			return
+		}
+		const granted = await requestPermission()
+		if (!granted) {
+			micError.value = 'Permission refusée. Autorisez le micro dans les paramètres du navigateur.'
+		}
+	} else {
+		disableMic()
+	}
+}
 </script>
 
 <template>
@@ -38,6 +66,21 @@ function onToggle(e: Event) {
 				<span v-if="p.id === myUserId" class="tag-me">(moi)</span>
 			</li>
 		</ul>
+	</div>
+
+	<div class="hub-mic-section">
+		<label class="mic-toggle">
+			<input type="checkbox" :checked="micEnabled" @change="onMicToggle" />
+			Répondre à l'oral
+			<span class="mic-hint">(utiliser le micro pour vos réponses)</span>
+		</label>
+		<p v-if="micError" class="mic-error">{{ micError }}</p>
+
+		<label class="tts-toggle">
+			<input type="checkbox" v-model="ttsEnabled" />
+			Lire les questions à voix haute
+			<span class="tts-hint">(synthèse vocale des questions)</span>
+		</label>
 	</div>
 
 	<div v-if="isCreator" class="hub-controls">
