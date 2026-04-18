@@ -44,7 +44,14 @@ const statusLabel = (status: string) =>
 						:key="p.id"
 						:class="{ 'player--dead': !p.isAlive }"
 					>
-										<span>{{ p.isAlive ? '●' : '○' }}</span>
+						<img
+							v-if="p.avatarDataUrl"
+							:src="p.avatarDataUrl"
+							alt="Avatar"
+							class="player-avatar"
+						/>
+						<Icon v-else name="pixelarticons:user" class="player-avatar-fallback" />
+						<span>{{ p.isAlive ? '●' : '○' }}</span>
 						{{ aliasForPanel(p.id, gameInfo.players, gameInfo.myUserId) }}
 						<span v-if="p.id === gameInfo.myUserId" class="tag-me">(moi)</span>
 					</li>

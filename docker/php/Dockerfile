@@ -3,7 +3,9 @@ FROM php:8.3-fpm-alpine
 # Installation des dépendances système et extensions PHP
 RUN apk add --no-cache \
     bash git unzip icu-dev libpq-dev libzip-dev oniguruma-dev postgresql-client \
-    && docker-php-ext-install intl pdo pdo_pgsql opcache zip
+    freetype-dev libjpeg-turbo-dev libpng-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install intl pdo pdo_pgsql opcache zip gd
 
 # Installation de Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

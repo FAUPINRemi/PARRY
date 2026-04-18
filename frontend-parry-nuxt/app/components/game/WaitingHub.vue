@@ -4,6 +4,7 @@ interface Player {
 	nickname: string
 	isAlive: boolean
 	isAI: boolean
+	avatarDataUrl?: string | null
 }
 
 const props = defineProps<{
@@ -33,7 +34,13 @@ function onToggle(e: Event) {
 		<p class="hub-players--label">Joueurs connectés ( {{ players.length }} ) :</p>
 		<ul class="hub-players--list">
 			<li v-for="p in players" :key="p.id">
-				<Icon name="pixelarticons:user" />
+				<img
+					v-if="p.avatarDataUrl"
+					:src="p.avatarDataUrl"
+					alt="Avatar"
+					class="player-avatar"
+				/>
+				<Icon v-else name="pixelarticons:user" class="player-avatar-fallback" />
 				 {{ p.nickname }} 
 				<span v-if="p.id === myUserId" class="tag-me">(moi)</span>
 			</li>
