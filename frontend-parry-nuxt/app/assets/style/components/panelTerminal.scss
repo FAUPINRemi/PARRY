@@ -48,3 +48,26 @@
     }
   }
 }
+
+/* --- bouton micro dans le terminal --- */
+.mic-btn {
+  flex-shrink: 0;
+  padding: 0.4rem 0.5rem;
+  line-height: 1;
+
+  &--recording {
+    color: #f44336;
+    border-color: #f44336;
+    animation: mic-pulse 1s ease-in-out infinite;
+  }
+
+  &--loading {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@keyframes mic-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
