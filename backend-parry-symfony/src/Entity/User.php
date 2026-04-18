@@ -21,8 +21,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private Uuid $id;
 
     #[ORM\Column(type: 'string', length: 180, unique: true)]
-    #[Assert\NotBlank(message: 'L\'email est obligatoire.')]
-    #[Assert\Email(message: 'L\'email  value  n\'est pas valide.')]
+    #[Assert\NotBlank(message: "L'email est obligatoire.")]
+    #[Assert\Email(message: "L'email value n'est pas valide.")]
     private ?string $email = null;
 
     #[ORM\Column(type: 'string', length: 50, unique: true)]
@@ -30,8 +30,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\Length(
         min: 3,
         max: 50,
-        minMessage: 'Le pseudo doit contenir au moins  limit  caractères.',
-        maxMessage: 'Le pseudo ne peut pas dépasser  limit  caractères.'
+        minMessage: 'Le pseudo doit contenir au moins limit caractères.',
+        maxMessage: 'Le pseudo ne peut pas dépasser limit caractères.'
     )]
     private ?string $pseudo = null;
 
@@ -40,6 +40,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(type: 'string')]
     private ?string $password = null;
+
+    // --- AJOUT : avatar en base64 + mime ---
+    // On stocke UNIQUEMENT le base64 brut (sans "data:image/png;base64,").
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $avatarBase64 = null;
+
+    #[ORM\Column(type: 'string', length: 50, nullable: true)]
+    private ?string $avatarMime = null;
 
     public function __construct()
     {
@@ -93,7 +101,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getPassword(): string
     {
-        return $this->password;
+        return (string) $this->password;
     }
 
     public function setPassword(string $password): self
@@ -104,5 +112,38 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function eraseCredentials(): void
     {
+    }
+
+   
+    public function getAvatarBase64(): ?string
+    {
+        return $this->avatarBase64;
+    }
+
+    public function setAvatarBase64(?string $avatarBase64): self
+    {
+        $this->avatarBase64 = $avatarBase64;
+        return $this;
+    }
+
+    public function getAvatarMime(): ?string
+    {
+        return $this->avatarMime;
+    }
+
+    public function setAvatarMime(?string $avatarMime): self
+    {
+        $this->avatarMime = $avatarMime;
+        return $this;
+    }
+
+  
+    public function getAvatarDataUrl(): ?string
+    {
+        if (!$this->avatarBase64) {
+            return null;
+        }
+        $mime = $this->avatarMime ?: 'image/png';
+        return 'data:' . $mime . ';base64,' . $this->avatarBase64;
     }
 }
