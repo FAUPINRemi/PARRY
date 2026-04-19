@@ -308,7 +308,7 @@ class GameController extends AbstractController
             foreach ($game->getPlayers() as $player) {
                 $players[] = [
                     'id' => $player->getId()->toString(),
-                    'pseudo' => $player->getPseudo()
+                    'pseudo' => $player->getPseudo(),
                 ];
             }
             
@@ -352,6 +352,7 @@ class GameController extends AbstractController
         // Players depuis Redis
         $playersRaw = $redis->hgetall("game:{$identifier}:players") ?: [];
         $players = [];
+
         foreach ($playersRaw as $playerId => $playerJson) {
             $p = json_decode($playerJson, true);
             $isAlive = $p['isAlive'] ?? true;

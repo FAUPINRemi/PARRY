@@ -17,7 +17,7 @@ class VertexAiImageClient
     ) {}
 
     /**
-     * @param array{prompt:string,width:int,height:int,mime:string,numberOfImages:int} $args
+     * @param array{prompt:string,width:int,height:int,mime:string,numberOfImages:int,quality?:int} $args
      * @return array{base64:string,mime:string}
      */
     public function generateImageBase64(array $args): array
@@ -42,6 +42,10 @@ class VertexAiImageClient
             ],
             'parameters' => [
                 'sampleCount' => $args['numberOfImages'],
+                'width' => $args['width'],
+                'height' => $args['height'],
+                'mimeType' => $args['mime'],
+                'compressionQuality' => $args['quality'] ?? 30,
             ],
         ];
 

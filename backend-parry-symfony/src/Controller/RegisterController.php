@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Service\AI\AIImageService;
 use Doctrine\ORM\EntityManagerInterface;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,7 +19,8 @@ class RegisterController extends AbstractController
     public function __construct(
         private EntityManagerInterface $entityManager,
         private UserPasswordHasherInterface $passwordHasher,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private AIImageService $aiImageService,
     ) {}
 
     #[Route('/api/register', name: 'api_register', methods: ['POST'])]
@@ -85,13 +87,19 @@ class RegisterController extends AbstractController
             $this->entityManager->persist($user);
             $this->entityManager->flush();
 
+            try {
+                $this->aiImageService->generateAndSaveAsciiAvatarForUser($user);
+            } catch (\Throwable) {
+            }
+
             return $this->json([
                 'status' => 'success',
                 'message' => 'Utilisateur créé avec succès.',
                 'user' => [
                     'id' => $user->getId(),
                     'email' => $user->getEmail(),
-                    'pseudo' => $user->getPseudo()
+                    'pseudo' => $user->getPseudo(),
+                    'avatarDataUrl' => $user->getAvatarDataUrl(),
                 ]
             ], Response::HTTP_CREATED);
         } catch (\Exception $e) {

@@ -41,6 +41,14 @@ services:
     App\Service\AI\ModerationAI: { lazy: true }
     App\Service\AI\AIJoueurService: { lazy: true }
 
+    App\Service\AI\VertexAiImageClient:
+        lazy: true
+        arguments:
+            $projectId: '%env(VERTEX_PROJECT_ID)%'
+            $location: '%env(VERTEX_LOCATION)%'
+            $imageModel: '%env(VERTEX_IMAGE_MODEL)%'
+            $accessToken: '%env(VERTEX_ACCESS_TOKEN)%'
+
     # --- AUTRES SERVICES ---
     App\Service\AI\BudgetGuard:
         public: true

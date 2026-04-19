@@ -320,3 +320,19 @@ li.player--me    { color: #fff; }
 .player-icon { margin-right: 0.4rem; font-size: 0.8rem; }
 .tag-me  { color: #aaa; font-size: 0.75rem; margin-left: 0.3rem; }
 .tag-ai  { background: #f44336; color: #fff; font-size: 0.7rem; padding: 0 0.3rem; margin-left: 0.3rem; }
+
+.player-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #333;
+  flex: 0 0 20px;
+}
+
+.player-avatar-fallback {
+  width: 20px;
+  height: 20px;
+  color: #999;
+  flex: 0 0 20px;
+}
