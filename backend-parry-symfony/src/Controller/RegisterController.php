@@ -6,7 +6,6 @@ use App\Entity\User;
 use App\Service\AI\AIImageService;
 use Doctrine\ORM\EntityManagerInterface;
 use OpenApi\Attributes as OA;
-use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,7 +21,6 @@ class RegisterController extends AbstractController
         private UserPasswordHasherInterface $passwordHasher,
         private ValidatorInterface $validator,
         private AIImageService $aiImageService,
-        private LoggerInterface $logger,
     ) {}
 
     #[Route('/api/register', name: 'api_register', methods: ['POST'])]
@@ -90,21 +88,8 @@ class RegisterController extends AbstractController
             $this->entityManager->flush();
 
             try {
-                $this->logger->info('[REGISTER] Tentative generation avatar IA', [
-                    'userId' => (string) $user->getId(),
-                    'email' => $user->getEmail(),
-                ]);
                 $this->aiImageService->generateAndSaveAsciiAvatarForUser($user);
-                $this->logger->info('[REGISTER] Avatar IA genere avec succes', [
-                    'userId' => (string) $user->getId(),
-                    'email' => $user->getEmail(),
-                ]);
-            } catch (\Throwable $e) {
-                $this->logger->warning('[REGISTER] Echec generation avatar IA', [
-                    'userId' => (string) $user->getId(),
-                    'email' => $user->getEmail(),
-                    'error' => $e->getMessage(),
-                ]);
+            } catch (\Throwable) {
             }
 
             return $this->json([

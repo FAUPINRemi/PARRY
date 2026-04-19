@@ -4,22 +4,16 @@ namespace App\Service\AI;
 
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Log\LoggerInterface;
 
 class AIImageService
 {
     public function __construct(
         private readonly VertexAiImageClient $vertexAiImageClient,
         private readonly EntityManagerInterface $entityManager,
-        private readonly LoggerInterface $logger,
     ) {}
 
     public function generateAndSaveAsciiAvatarForUser(User $user): void
     {
-        $this->logger->info('[AI_IMAGE] Debut generation avatar', [
-            'userId' => (string) $user->getId(),
-        ]);
-
         $prompt = $this->buildAsciiAvatarPrompt($user);
 
         $result = $this->vertexAiImageClient->generateImageBase64([
@@ -49,18 +43,7 @@ class AIImageService
         $mime = $optimized['mime'];
         $base64 = base64_encode($binary);
 
-        $this->logger->info('[AI_IMAGE] Avatar optimise', [
-            'userId' => (string) $user->getId(),
-            'mime' => $mime,
-            'bytes' => strlen($binary),
-        ]);
-
         if (strlen($binary) > $maxBytes) {
-            $this->logger->warning('[AI_IMAGE] Image trop grosse', [
-                'bytes' => strlen($binary),
-                'userId' => (string) $user->getId(),
-                'mime' => $mime,
-            ]);
             throw new \RuntimeException('IMAGE_TROP_GROSSE');
         }
 
@@ -69,12 +52,6 @@ class AIImageService
 
         $this->entityManager->persist($user);
         $this->entityManager->flush();
-
-        $this->logger->info('[AI_IMAGE] Avatar enregistre en base', [
-            'userId' => (string) $user->getId(),
-            'mime' => $mime,
-            'base64Length' => strlen($base64),
-        ]);
     }
 
     /**
