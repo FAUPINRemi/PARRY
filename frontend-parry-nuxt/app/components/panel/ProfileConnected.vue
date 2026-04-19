@@ -4,7 +4,7 @@ import type { Player } from '@/components/game/types'
 import { useAuth } from '@/composables/auth/useAuth'
 
 const { gameInfo } = useGameInfo()
-const { connectedPseudo, logout } = useAuth()
+const { connectedPseudo, connectedAvatarDataUrl, logout } = useAuth()
 
 function aliasForPanel(playerId: string, players: Player[], myUserId: string | null) {
 	return playerAlias(playerId, players, myUserId)
@@ -16,7 +16,16 @@ const statusLabel = (status: string) =>
 
 <template>
 	<div class="panelProfil--connected">
-		<p v-if="connectedPseudo" class="profil-connected-email">{{ connectedPseudo }}</p>
+		<div v-if="connectedPseudo" class="profil-connected-user">
+			<img
+				v-if="connectedAvatarDataUrl"
+				:src="connectedAvatarDataUrl"
+				alt="Mon avatar"
+				class="player-avatar"
+			/>
+			<Icon v-else name="pixelarticons:user" class="player-avatar-fallback" />
+			<p class="profil-connected-email">{{ connectedPseudo }}</p>
+		</div>
 
 		<button class="gButton important profil-btn" @click="logout">
 			<Icon name="pixelarticons:logout" />
@@ -44,13 +53,6 @@ const statusLabel = (status: string) =>
 						:key="p.id"
 						:class="{ 'player--dead': !p.isAlive }"
 					>
-						<img
-							v-if="p.avatarDataUrl"
-							:src="p.avatarDataUrl"
-							alt="Avatar"
-							class="player-avatar"
-						/>
-						<Icon v-else name="pixelarticons:user" class="player-avatar-fallback" />
 						<span>{{ p.isAlive ? '●' : '○' }}</span>
 						{{ aliasForPanel(p.id, gameInfo.players, gameInfo.myUserId) }}
 						<span v-if="p.id === gameInfo.myUserId" class="tag-me">(moi)</span>

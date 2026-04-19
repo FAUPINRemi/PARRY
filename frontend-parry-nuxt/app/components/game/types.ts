@@ -12,7 +12,6 @@ export interface Player {
 	nickname: string
 	isAlive: boolean
 	isAI: boolean
-	avatarDataUrl?: string | null
 }
 
 export interface Answer {

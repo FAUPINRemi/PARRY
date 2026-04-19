@@ -4,8 +4,8 @@ export function useAuth() {
 	const { emitEvent } = useTerminal()
 	const { apiFetch } = useApi()
 
-	// useState → état partagé entre tous les composants (singleton Nuxt)
 	const connectedPseudo = useState<string | null>('auth:pseudo', () => null)
+	const connectedAvatarDataUrl = useState<string | null>('auth:avatar', () => null)
 	const loading = useState<boolean>('auth:loading', () => false)
 	const error = useState<string | null>('auth:error', () => null)
 	const success = useState<boolean>('auth:success', () => false)
@@ -16,6 +16,8 @@ export function useAuth() {
 		if (!process.client) return
 		const pseudo = localStorage.getItem('userPseudo')
 		if (pseudo) connectedPseudo.value = pseudo
+		const avatarDataUrl = localStorage.getItem('userAvatarDataUrl')
+		if (avatarDataUrl) connectedAvatarDataUrl.value = avatarDataUrl
 	}
 
 	async function login(params: { username: string; password: string }) {
@@ -33,9 +35,12 @@ export function useAuth() {
 
 			if (res.ok && data.success) {
 				connectedPseudo.value = data.user?.pseudo ?? data.user?.username ?? params.username
+				connectedAvatarDataUrl.value = data.user?.avatarDataUrl ?? null
 				if (process.client) {
 					localStorage.setItem('userPseudo', connectedPseudo.value!)
 					if (data.user?.id) localStorage.setItem('userId', data.user.id)
+					if (connectedAvatarDataUrl.value) localStorage.setItem('userAvatarDataUrl', connectedAvatarDataUrl.value)
+					else localStorage.removeItem('userAvatarDataUrl')
 				}
 				emitEvent({ message: 'Connexion réussie !', type: 'success' })
 			} else {
@@ -65,6 +70,11 @@ export function useAuth() {
 
 			if (res.ok && data.status === 'success') {
 				success.value = true
+				connectedAvatarDataUrl.value = data.user?.avatarDataUrl ?? null
+				if (process.client) {
+					if (connectedAvatarDataUrl.value) localStorage.setItem('userAvatarDataUrl', connectedAvatarDataUrl.value)
+					else localStorage.removeItem('userAvatarDataUrl')
+				}
 				emitEvent({ message: 'Inscription réussie !', type: 'success' })
 			} else {
 				error.value = data.message || "Erreur lors de l'inscription"
@@ -80,9 +90,11 @@ export function useAuth() {
 
 	function forceLogout() {
 		connectedPseudo.value = null
+		connectedAvatarDataUrl.value = null
 		if (process.client) {
 			localStorage.removeItem('userPseudo')
 			localStorage.removeItem('userId')
+			localStorage.removeItem('userAvatarDataUrl')
 		}
 	}
 
@@ -112,9 +124,11 @@ export function useAuth() {
 			const res = await apiFetch('/api/logout', { method: 'POST' })
 			if (res.ok || res.status === 401) {
 				connectedPseudo.value = null
+				connectedAvatarDataUrl.value = null
 				if (process.client) {
 					localStorage.removeItem('userPseudo')
 					localStorage.removeItem('userId')
+					localStorage.removeItem('userAvatarDataUrl')
 				}
 				emitEvent({ message: 'Déconnexion réussie.', type: 'info' })
 			} else {
@@ -123,9 +137,11 @@ export function useAuth() {
 			}
 		} catch {
 			connectedPseudo.value = null
+			connectedAvatarDataUrl.value = null
 			if (process.client) {
 				localStorage.removeItem('userPseudo')
 				localStorage.removeItem('userId')
+				localStorage.removeItem('userAvatarDataUrl')
 			}
 		} finally {
 			loading.value = false
@@ -137,6 +153,7 @@ export function useAuth() {
 		error,
 		success,
 		connectedPseudo,
+		connectedAvatarDataUrl,
 		isLoggedIn,
 		initFromStorage,
 		forceLogout,

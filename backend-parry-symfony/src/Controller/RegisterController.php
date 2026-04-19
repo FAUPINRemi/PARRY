@@ -105,7 +105,6 @@ class RegisterController extends AbstractController
                     'email' => $user->getEmail(),
                     'error' => $e->getMessage(),
                 ]);
-                // L'inscription reste réussie même si la génération d'avatar échoue.
             }
 
             return $this->json([
@@ -114,7 +113,8 @@ class RegisterController extends AbstractController
                 'user' => [
                     'id' => $user->getId(),
                     'email' => $user->getEmail(),
-                    'pseudo' => $user->getPseudo()
+                    'pseudo' => $user->getPseudo(),
+                    'avatarDataUrl' => $user->getAvatarDataUrl(),
                 ]
             ], Response::HTTP_CREATED);
         } catch (\Exception $e) {

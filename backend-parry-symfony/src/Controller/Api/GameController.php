@@ -284,8 +284,7 @@ class GameController extends AbstractController
                                 type: 'object',
                                 properties: [
                                     new OA\Property(property: 'id', type: 'string'),
-                                    new OA\Property(property: 'pseudo', type: 'string'),
-                                    new OA\Property(property: 'avatarDataUrl', type: 'string', nullable: true)
+                                    new OA\Property(property: 'pseudo', type: 'string')
                                 ]
                             )
                         ),
@@ -310,7 +309,6 @@ class GameController extends AbstractController
                 $players[] = [
                     'id' => $player->getId()->toString(),
                     'pseudo' => $player->getPseudo(),
-                    'avatarDataUrl' => $player->getAvatarDataUrl(),
                 ];
             }
             
@@ -355,15 +353,6 @@ class GameController extends AbstractController
         $playersRaw = $redis->hgetall("game:{$identifier}:players") ?: [];
         $players = [];
 
-        $playerIds = array_keys($playersRaw);
-        $avatarsByPlayerId = [];
-        if (!empty($playerIds)) {
-            $users = $this->userRepository->findBy(['id' => $playerIds]);
-            foreach ($users as $playerEntity) {
-                $avatarsByPlayerId[$playerEntity->getId()->toString()] = $playerEntity->getAvatarDataUrl();
-            }
-        }
-
         foreach ($playersRaw as $playerId => $playerJson) {
             $p = json_decode($playerJson, true);
             $isAlive = $p['isAlive'] ?? true;
@@ -372,7 +361,6 @@ class GameController extends AbstractController
                 'nickname' => $p['nickname'] ?? 'Joueur',
                 'isAlive'  => $isAlive,
                 'isAI'     => (bool)($p['isAI'] ?? false),
-                'avatarDataUrl' => $avatarsByPlayerId[$playerId] ?? null,
             ];
         }
 
