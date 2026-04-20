@@ -1,0 +1,142 @@
+services:
+  php:
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+    container_name: parry-php
+    restart: unless-stopped
+    working_dir: /var/www/symfony
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV}
+      DATABASE_URL: ${DATABASE_URL}
+      PHP_CLI_SERVER_WORKERS: 8
+    volumes:
+      - ./backend-parry-symfony:/var/www/symfony:cached
+      - /var/www/symfony/vendor
+      - /var/www/symfony/var/cache
+      - /var/www/symfony/var/log
+    depends_on:
+      - db
+    networks:
+      - internal
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.parry-api.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.parry-api.priority=100"
+      - "traefik.http.routers.parry-api.entrypoints=web"
+      - "traefik.http.routers.parry-api.service=parry-api"
+      - "traefik.http.services.parry-api.loadbalancer.server.port=8000"
+
+  db:
+    image: postgres:16-alpine
+    container_name: parry-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  adminer:
+    image: adminer:latest
+    container_name: parry-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      - db
+    networks:
+      - internal
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+
+  mercure:
+    image: dunglas/mercure
+    container_name: parry-mercure
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: ":80"
+      MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_SECRET_PUBLISHER}"
+      MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_SECRET_SUBSCRIBER}"
+      MERCURE_EXTRA_DIRECTIVES: |
+        anonymous
+        cors_origins http://10.255.0.19
+      CADDY_SERVER_EXTRA_DIRECTIVES: |
+        header Access-Control-Allow-Origin "http://10.255.0.19"
+        header Access-Control-Allow-Credentials "true"
+    networks:
+      - internal
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.parry-mercure.rule=PathPrefix(`/.well-known/mercure`)"
+      - "traefik.http.routers.parry-mercure.entrypoints=web"
+      - "traefik.http.services.parry-mercure.loadbalancer.server.port=80"
+
+  redis:
+    image: redis:7-alpine
+    container_name: parry-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - internal
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: parry-redisinsight
+    restart: unless-stopped
+    networks:
+      - internal
+    ports:
+      - "127.0.0.1:${REDISINSIGHT_PORT:-5541}:5540"
+    depends_on:
+      - redis
+
+  frontend:
+    build:
+      context: .
+      target: dev
+      dockerfile: ./docker/frontend/Dockerfile
+    container_name: parry-frontend
+    restart: unless-stopped
+    environment:
+      - HOST=0.0.0.0
+      - PORT=80
+      - CHOKIDAR_USEPOLLING=1
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./frontend-parry-nuxt:/app
+      - /app/node_modules
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.parry-front.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.parry-front.priority=1"
+      - "traefik.http.routers.parry-front.entrypoints=web"
+      - "traefik.http.services.parry-front.loadbalancer.server.port=80"
+
+volumes:
+  db-data:
+  redis-data:
+  redisinsight-data:
+  nuxt_node_modules:
+
+networks:
+  internal:
+    driver: bridge
+  proxy:
+    external: true

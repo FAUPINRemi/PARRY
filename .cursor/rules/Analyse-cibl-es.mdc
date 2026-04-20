@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+For project analysis requests:
+- Ask which specific directory or component to analyze
+- Never scan entire codebase unless explicitly asked
+- Provide architecture summaries instead of full file dumps

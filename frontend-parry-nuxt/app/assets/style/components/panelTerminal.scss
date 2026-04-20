@@ -1,0 +1,73 @@
+@use "../util/media-queries" as *;
+@use "./../util/colors";
+@use "./../util/spacing";
+@use "./../util/font-sizes";
+
+.terminal {
+  display: flex;
+
+  @include respond-to(xs) {
+    flex-direction: column;
+    align-items: stretch;
+    padding: spacing.$s1;
+  }
+
+  .panel {
+    &--content {
+      max-height: 100%;
+      width: 100%;
+
+      ul {
+        height: 100%;
+
+        display: flex;
+        flex-direction: column-reverse;
+
+        overflow-y: auto;
+
+        scrollbar-width: none;
+
+        list-style-type: ">";
+
+        padding-left: spacing.$s5;
+
+        @include respond-to(xs) {
+          padding-left: spacing.$s2;
+        }
+
+        li {
+          padding-left: spacing.$s3;
+
+          font-size: font-sizes.$f0;
+          @include respond-to(xs) {
+            font-size: 0.9rem;
+            padding-left: spacing.$s1;
+          }
+        }
+      }
+    }
+  }
+}
+
+/* --- bouton micro dans le terminal --- */
+.mic-btn {
+  flex-shrink: 0;
+  padding: 0.4rem 0.5rem;
+  line-height: 1;
+
+  &--recording {
+    color: #f44336;
+    border-color: #f44336;
+    animation: mic-pulse 1s ease-in-out infinite;
+  }
+
+  &--loading {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@keyframes mic-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}

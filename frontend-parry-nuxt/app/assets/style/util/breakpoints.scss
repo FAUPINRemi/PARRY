@@ -1,0 +1,20 @@
+// Variables for breakpoints
+$w1: 480px;
+$w2: 768px;
+$w3: 992px;
+$w4: 1200px;
+$w5: 1600px;
+$w6: 1900px;
+
+// Breakpoints mixins
+@mixin more-than($size) {
+  @media (min-width: $size) {
+    @content;
+  }
+}
+
+@mixin less-then($size) {
+  @media (max-width: $size) {
+    @content;
+  }
+}

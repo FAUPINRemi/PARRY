@@ -1,0 +1,65 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    # --- CONFIGURATION AI SÉCURISÉE ---
+    
+    # Le client de base : Lazy pour ne pas lire la clé au démarrage
+    App\Service\AI\GeminiClient:
+        lazy: true
+        arguments:
+            $apiUrl: '%env(GEMINI_API_URL)%'
+            $apiKey: '%env(GEMINI_API_KEY)%'
+            $model: '%env(GEMINI_MODEL)%'
+            $budgetGuard: '@App\Service\AI\BudgetGuard'
+            $logger: '@logger'
+
+    App\Service\AI\GeminiTTSService:
+        lazy: true
+        arguments:
+            $apiUrl: '%env(GEMINI_API_URL)%'
+            $apiKey: '%env(GEMINI_API_KEY)%'
+            $ttsModel: '%env(GEMINI_TTS_MODEL)%'
+            $budgetGuard: '@App\Service\AI\BudgetGuard'
+            $logger: '@logger'
+
+    # On passe TOUS les services liés à l'IA en Lazy
+    # Symfony ne créera ces objets que si la méthode playAI est appelée
+    App\Service\AI\AIOrchestrator: { lazy: true }
+    App\Service\AI\QuestionGeneratorAI: { lazy: true }
+    App\Service\AI\ResponseGeneratorAI: { lazy: true }
+    App\Service\AI\VoteAnalyzerAI: { lazy: true }
+    App\Service\AI\MonitoringAI: { lazy: true }
+    App\Service\AI\ModerationAI: { lazy: true }
+    App\Service\AI\AIJoueurService: { lazy: true }
+
+    App\Service\AI\VertexAiImageClient:
+        lazy: true
+        arguments:
+            $projectId: '%env(VERTEX_PROJECT_ID)%'
+            $location: '%env(VERTEX_LOCATION)%'
+            $imageModel: '%env(VERTEX_IMAGE_MODEL)%'
+            $accessToken: '%env(VERTEX_ACCESS_TOKEN)%'
+
+    # --- AUTRES SERVICES ---
+    App\Service\AI\BudgetGuard:
+        public: true
+
+    App\Service\GameRedisService:
+        arguments:
+            $redisUrl: '%env(REDIS_URL)%'
+
+    App\EventSubscriber\RateLimitSubscriber:
+        arguments:
+            $rateLimiter: '@App\Security\RateLimiter'
+            $logger: '@logger'
+        tags:
+            - { name: kernel.event_subscriber }

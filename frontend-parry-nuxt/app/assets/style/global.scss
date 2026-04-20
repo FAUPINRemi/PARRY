@@ -1,0 +1,22 @@
+@use "util/colors";
+@use "util/spacing";
+
+* {
+  box-sizing: border-box;
+  margin: spacing.$s0;
+  padding: spacing.$s0;
+  min-width: spacing.$s0;
+  user-select: none;
+}
+
+html {
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+body {
+  min-height: 100vh;
+  text-rendering: optimizeLegibility;
+  color: colors.$accent-main;
+  background-color: colors.$bg-main;
+}

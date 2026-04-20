@@ -1,0 +1,157 @@
+@use "../util/colors";
+@use "../util/spacing";
+@use "../util/font-sizes";
+
+.g {
+  &Body {
+    font-family: "DotGothic16", sans-serif;
+    letter-spacing: spacing.$s2;
+
+    /*
+    text-shadow: 0 0 5px #c8c8c8;
+
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(black, 0.15),
+        rgba(black, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+      pointer-events: none;
+    }
+*/
+
+    & ::selection {
+      background: colors.$shade-020;
+      text-shadow: none;
+    }
+
+    input {
+      border: none;
+
+      font-family: "DotGothic16", sans-serif;
+      letter-spacing: spacing.$s2;
+      text-transform: uppercase;
+      color: colors.$shade-090;
+
+      &:focus {
+        outline: none;
+        box-shadow: inset 0px 0px 0px 1px colors.$shade-020;
+      }
+    }
+
+    p,
+    a,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    input,
+    button {
+      font-weight: 400;
+    }
+
+    #__nuxt {
+      display: grid;
+
+      grid-template-rows: 1fr auto;
+
+      height: 100vh;
+      overflow: hidden;
+
+      padding: spacing.$s5;
+    }
+  }
+
+  &Row {
+    display: flex;
+
+    min-height: 0;
+    min-width: 100%;
+
+    &--aside {
+      height: 26vh;
+    }
+  }
+
+  &Button {
+    display: flex;
+
+    align-items: center;
+
+    height: fit-content;
+    width: fit-content;
+
+    padding: spacing.$s2 spacing.$s3;
+    gap: spacing.$s4;
+
+    font-size: font-sizes.$f0;
+    font-family: "DotGothic16", sans-serif;
+    color: colors.$shade-090;
+
+    background-color: colors.$shade-010;
+    border: none;
+
+    cursor: pointer;
+
+    &::before {
+      content: "[";
+    }
+
+    &::after {
+      content: "]";
+    }
+
+    &:hover {
+      background-color: colors.$shade-020;
+    }
+
+    &.important {
+      background-color: colors.$shade-100;
+      color: colors.$shade-010;
+
+      &:hover {
+        background-color: colors.$shade-080;
+      }
+    }
+
+    &.transparentBackground,
+    &.inline {
+      background-color: transparent;
+
+      &:hover {
+        background-color: colors.$shade-020;
+      }
+    }
+
+    &.inline {
+      border-bottom: 1px solid colors.$shade-090;
+
+      &::after,
+      &::before {
+        content: none;
+      }
+    }
+
+    &.iconOnly {
+      padding: spacing.$s2;
+      gap: spacing.$s0;
+
+      font-size: 0px;
+
+      span {
+        font-size: font-sizes.$f1;
+      }
+    }
+  }
+}

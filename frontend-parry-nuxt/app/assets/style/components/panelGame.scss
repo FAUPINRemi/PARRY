@@ -1,0 +1,338 @@
+@use "../util/media-queries" as *;
+@use "./../util/colors";
+@use "./../util/spacing";
+@use "./../util/font-sizes";
+
+
+.gameWrap {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.gameGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+/* --- */
+.players-bar {
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  padding: 0.4rem 0;
+  margin-bottom: 0.8rem;
+  border-bottom: 1px solid #333;
+  font-size: 0.85rem;
+
+  &--alive { color: #4caf50; font-weight: bold; }
+  &--dead  { color: #f44336; font-weight: bold; }
+  &--round {
+    color: #fff;
+    margin-left: auto;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+  }
+}
+
+/* --- */
+.game-screen-title {
+  font-size: 1.6rem;
+  margin: 0 0 1rem 0;
+  letter-spacing: 0.03em;
+}
+
+.game-code-display {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  strong { letter-spacing: 0.15em; }
+}
+
+/* --- */
+.hub-players {
+  margin-bottom: 1.2rem;
+  &--label { font-size: 0.85rem; color: #aaa; margin-bottom: 0.4rem; }
+  &--list  { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+}
+
+.hub-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.hub-hint {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.hub-waiting {
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+.pro-ai-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.pro-ai-hint {
+  color: #888;
+  font-size: 0.75rem;
+}
+
+/* --- micro section (salon d'attente) --- */
+.hub-mic-section {
+  margin-bottom: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.mic-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.mic-hint {
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.mic-error {
+  color: #f44336;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.tts-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.tts-hint {
+  color: #888;
+  font-size: 0.75rem;
+}
+
+/* --- */
+.phase-box {
+  padding: 1rem;
+  border: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  &--mine { border-color: #4caf50; }
+}
+
+.phase-hint  { color: #aaa; font-size: 0.85rem; }
+.phase-success { color: #4caf50; }
+
+/* --- */
+.question-display {
+  background: #111;
+  border-left: 3px solid #4caf50;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+
+  &--label { color: #aaa; font-size: 0.8rem; margin-bottom: 0.3rem; }
+  &--text  { font-size: 1.1rem; }
+}
+
+/* --- */
+.answers-progress {
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  overflow: hidden;
+
+  &--bar {
+    height: 100%;
+    background: #4caf50;
+    transition: width 0.3s;
+  }
+}
+
+/* --- vote phase --- */
+.vote-instruction {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.8rem;
+}
+
+.vote-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 1rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.vote-card {
+  background: #111;
+  border: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: default;
+
+  &:hover:not(.vote-card--voted):not(.vote-card--mine) {
+    border-color: #666;
+    background: #161616;
+  }
+
+  &--mine {
+    background: #0a0a0a;
+    border-color: #333;
+    opacity: 0.45;
+  }
+
+  &--voted { pointer-events: none; opacity: 0.6; }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0.75rem;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+  }
+
+  &__num {
+    font-size: 0.7rem;
+    color: #888;
+    letter-spacing: 0.12em;
+    font-weight: bold;
+  }
+
+  &__tag {
+    font-size: 0.7rem;
+    color: #666;
+    font-style: italic;
+  }
+
+  &__text {
+    padding: 0.85rem 0.75rem;
+    font-size: 0.95rem;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    flex: 1;
+    line-height: 1.5;
+    color: #e0e0e0;
+  }
+
+  &__footer {
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid #222;
+    min-height: 2.4rem;
+    display: flex;
+    align-items: center;
+  }
+
+  &__btn {
+    width: 100%;
+    font-size: 0.8rem;
+  }
+}
+
+.revote-badge {
+  font-size: 0.75rem;
+  background: #f44336;
+  color: #fff;
+  padding: 0.1rem 0.4rem;
+  vertical-align: middle;
+  margin-left: 0.5rem;
+}
+
+/* --- */
+.elimination-box {
+  padding: 1.5rem;
+  border: 2px solid #f44336;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+
+  &--name  { font-size: 1.2rem; }
+  &--ai    { color: #4caf50; font-size: 1rem; }
+  &--human { color: #888; font-size: 0.9rem; }
+}
+
+/* --- */
+.gameover-screen {
+  text-align: center;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+
+  &--title  { font-size: 1.8rem; margin: 0; }
+  &--players { color: #4caf50; }
+  &--ai      { color: #f44336; }
+}
+
+.gameover-actions {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* --- */
+.loading-dots {
+  display: flex;
+  gap: 0.3rem;
+  span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #aaa;
+    animation: blink 1.2s infinite;
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
+  }
+}
+@keyframes blink {
+  0%, 80%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
+}
+
+li.player--dead  { opacity: 0.45; text-decoration: line-through; }
+li.player--me    { color: #fff; }
+
+.player-icon { margin-right: 0.4rem; font-size: 0.8rem; }
+.tag-me  { color: #aaa; font-size: 0.75rem; margin-left: 0.3rem; }
+.tag-ai  { background: #f44336; color: #fff; font-size: 0.7rem; padding: 0 0.3rem; margin-left: 0.3rem; }
+
+.player-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #333;
+  flex: 0 0 20px;
+}
+
+.player-avatar-fallback {
+  width: 20px;
+  height: 20px;
+  color: #999;
+  flex: 0 0 20px;
+}
