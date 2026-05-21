@@ -43,9 +43,11 @@ final class Version20260521160935 extends AbstractMigration
         $nowStr = $now->format('Y-m-d H:i:s');
 
         foreach ($animals as [$alias, $name]) {
-            $responsePath = "/images/sprites/response/wait_{$alias}.png";
-            $questionPath = "/images/sprites/questions/question_{$alias}.png";
-            $eliminationPath = "/images/sprites/eliminations/dead_{$alias}.png";
+            // Tous les animaux utilisent corbeau temporairement
+            // TODO: remplacer par les vrais spritesheets quand disponibles
+            $responsePath = '/images/sprites/response/wait_corbeau.png';
+            $questionPath = '/images/sprites/questions/question_corbeau.png';
+            $eliminationPath = '/images/sprites/eliminations/dead_corbeau.png';
 
             $this->addSql(
                 'INSERT INTO animal_configs (alias, animal_name, response_sprite, question_sprite, elimination_sprite, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
