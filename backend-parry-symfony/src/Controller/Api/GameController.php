@@ -3,6 +3,8 @@ namespace App\Controller\Api;
 
 use App\Entity\Game;
 use App\Entity\User;
+use App\Entity\GamePlayerAlias;
+use App\Enum\GameStatus;
 use App\Repository\AnimalConfigRepository;
 use App\Repository\GameRepository;
 use App\Repository\RoundRepository;
@@ -648,6 +650,93 @@ class GameController extends AbstractController
             return $this->json(['success' => true, 'animals' => $result], 200);
         } catch (\Exception $e) {
             return $this->json(['success' => false, 'error' => 'ERREUR_SERVEUR'], 500);
+        }
+    }
+
+    #[Route('/test-setup', name: 'api_game_test_setup', methods: ['POST'])]
+    #[OA\Post(path: '/api/game/test-setup', summary: '[DEV] Setup une partie de test avec joueurs et sprites', tags: ['Game'])]
+    public function testSetup(): JsonResponse
+    {
+        if ('dev' !== $_ENV['APP_ENV'] ?? 'prod') {
+            return $this->json(['success' => false, 'error' => 'ENDPOINT_TEST_DESACTIVE'], 403);
+        }
+
+        try {
+            // 1. Créer une partie test
+            $game = new Game();
+            $testCode = substr(strtoupper(uniqid()), 0, 6);
+            $game->setCode($testCode);
+            $game->setStatus(GameStatus::IN_PROGRESS);
+            $game->setIsPrivate(true);
+            $this->entityManager->persist($game);
+            $this->entityManager->flush();
+
+            $gameCode = $game->getCode();
+
+            // 2. Créer 3 joueurs test
+            $testUsers = [];
+            $animals = $this->animalConfigRepository->findAll();
+
+            for ($i = 0; $i < 3; $i++) {
+                $user = new User();
+                $user->setPseudo("TestPlayer$i");
+                $user->setEmail("test$i@test.local");
+                $user->setPassword($this->passwordHasher->hashPassword($user, 'test'));
+                $this->entityManager->persist($user);
+                $testUsers[] = $user;
+            }
+            $this->entityManager->flush();
+
+            // 3. Ajouter les joueurs à la partie avec sprites
+            foreach ($testUsers as $i => $user) {
+                $game->addPlayer($user);
+
+                // Assigner alias aléatoire
+                $animal = $animals[$i % count($animals)];
+                $alias = new GamePlayerAlias();
+                $alias->setGame($game);
+                $alias->setPlayer($user);
+                $alias->setAnimalConfig($animal);
+                $this->entityManager->persist($alias);
+
+                // Ajouter en Redis avec sprites
+                $this->gameRedisService->addPlayer(
+                    $gameCode,
+                    $user->getId()->toString(),
+                    $user->getPseudo(),
+                    false,
+                    $animal->getAlias(),
+                    $animal->getResponseSprite(),
+                    $animal->getQuestionSprite(),
+                    $animal->getEliminationSprite()
+                );
+            }
+            $this->entityManager->flush();
+
+            // 4. Setup une question et mettre en phase réponses
+            $question = "Quelle est ta couleur préférée?";
+            $redis = $this->gameRedisService->getRedis();
+            $redis->hset("game:$gameCode:round", 'status', 'en_attente_reponses');
+            $redis->hset("game:$gameCode:round", 'question', $question);
+            $redis->hset("game:$gameCode:round", 'questionAskedBy', $testUsers[0]->getId()->toString());
+            $redis->hset("game:$gameCode:round", 'roundNumber', 1);
+
+            return $this->json([
+                'success' => true,
+                'gameCode' => $gameCode,
+                'message' => 'Partie de test créée en phase réponses',
+                'players' => array_map(fn($u) => [
+                    'id' => $u->getId()->toString(),
+                    'pseudo' => $u->getPseudo(),
+                    'email' => $u->getEmail(),
+                ], $testUsers),
+            ], 200);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'error' => 'ERREUR_SETUP_TEST',
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 }
