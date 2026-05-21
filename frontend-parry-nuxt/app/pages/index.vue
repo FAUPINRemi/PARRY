@@ -104,8 +104,7 @@ o888o        o88o     o8888o o888o  o888o o888o  o888o     o888o
 						<div class="joinRow">
 							<input v-model="joinCode" type="text" placeholder="ABC123" required />
 							<button class="gButton important">
-								<Icon name="pixelarticons:search" />
-							Rejoindre
+								<Icon name="pixelarticons:search" /> Rejoindre
 							</button>
 						</div>
 

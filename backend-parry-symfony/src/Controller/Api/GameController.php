@@ -3,6 +3,7 @@ namespace App\Controller\Api;
 
 use App\Entity\Game;
 use App\Entity\User;
+use App\Repository\AnimalConfigRepository;
 use App\Repository\GameRepository;
 use App\Repository\RoundRepository;
 use App\Repository\UserRepository;
@@ -24,6 +25,7 @@ class GameController extends AbstractController
         private readonly GameRepository $gameRepository,
         private readonly RoundRepository $roundRepository,
         private readonly UserRepository $userRepository,
+        private readonly AnimalConfigRepository $animalConfigRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly GameRedisService $gameRedisService,
         private readonly UserPasswordHasherInterface $passwordHasher
@@ -356,12 +358,22 @@ class GameController extends AbstractController
         foreach ($playersRaw as $playerId => $playerJson) {
             $p = json_decode($playerJson, true);
             $isAlive = $p['isAlive'] ?? true;
-            $players[] = [
+            $player = [
                 'id'       => $playerId,
                 'nickname' => $p['nickname'] ?? 'Joueur',
                 'isAlive'  => $isAlive,
                 'isAI'     => (bool)($p['isAI'] ?? false),
             ];
+
+            if (!empty($p['alias'])) {
+                $player['alias'] = $p['alias'];
+            }
+
+            if (!empty($p['sprites'])) {
+                $player['sprites'] = $p['sprites'];
+            }
+
+            $players[] = $player;
         }
 
         // Round depuis Redis
@@ -560,22 +572,81 @@ class GameController extends AbstractController
     public function checkVictory(string $code): JsonResponse {
         try {
             $game = $this->gameRepository->findOneBy(['code' => $code]);
-            
+
             if (!$game) {
                 return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
             }
-            
+
             $winner = $this->gameService->victorireCondition($game);
-            
+
             if ($winner) {
                 $this->gameService->finGame($game, $winner);
-                
+
                 return $this->json(['success' => true, 'gameOver' => true, 'winner' => $winner], 200);
             }
-            
+
             return $this->json(['success' => true, 'gameOver' => false], 200);
-        } 
+        }
         catch (\Exception $e) {
+            return $this->json(['success' => false, 'error' => 'ERREUR_SERVEUR'], 500);
+        }
+    }
+
+    #[Route('/animals', name: 'api_animals_list', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/game/animals',
+        summary: 'Get all animal configurations with sprite paths',
+        tags: ['Game']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'List of all animals',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean'),
+                new OA\Property(
+                    property: 'animals',
+                    type: 'array',
+                    items: new OA\Items(
+                        properties: [
+                            new OA\Property(property: 'alias', type: 'string'),
+                            new OA\Property(property: 'animalName', type: 'string'),
+                            new OA\Property(
+                                property: 'sprites',
+                                properties: [
+                                    new OA\Property(property: 'response', type: 'string'),
+                                    new OA\Property(property: 'question', type: 'string'),
+                                    new OA\Property(property: 'elimination', type: 'string'),
+                                ]
+                            ),
+                        ]
+                    )
+                )
+            ]
+        )
+    )]
+    public function getAnimals(): JsonResponse
+    {
+        try {
+            $animals = $this->animalConfigRepository->findAll();
+            $result = [];
+
+            foreach ($animals as $animal) {
+                $result[] = [
+                    'alias' => $animal->getAlias(),
+                    'animalName' => $animal->getAnimalName(),
+                    'sprites' => [
+                        'response' => $animal->getResponseSprite(),
+                        'question' => $animal->getQuestionSprite(),
+                        'elimination' => $animal->getEliminationSprite(),
+                    ],
+                    'color' => $animal->getColor(),
+                    'description' => $animal->getDescription(),
+                ];
+            }
+
+            return $this->json(['success' => true, 'animals' => $result], 200);
+        } catch (\Exception $e) {
             return $this->json(['success' => false, 'error' => 'ERREUR_SERVEUR'], 500);
         }
     }

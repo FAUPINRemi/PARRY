@@ -50,6 +50,9 @@ class Game
     #[ORM\OneToMany(targetEntity: Round::class, mappedBy: 'game', cascade: ['persist', 'remove'])]
     private Collection $rounds;
 
+    #[ORM\OneToMany(targetEntity: GamePlayerAlias::class, mappedBy: 'game', cascade: ['persist', 'remove'])]
+    private Collection $playerAliases;
+
     public function __construct()
     {
         $this->id = Uuid::v4();
@@ -57,6 +60,7 @@ class Game
         $this->createdAt = new \DateTimeImmutable();
         $this->players = new ArrayCollection();
         $this->rounds = new ArrayCollection();
+        $this->playerAliases = new ArrayCollection();
     }
 
     public function getId(): Uuid { return $this->id; }
@@ -82,9 +86,17 @@ class Game
         } 
         return $this; 
     }
-    public function removePlayer(User $player): self { 
-        $this->players->removeElement($player); 
-        return $this; 
+    public function removePlayer(User $player): self {
+        $this->players->removeElement($player);
+        return $this;
     }
     public function getRounds(): Collection { return $this->rounds; }
+    public function getPlayerAliases(): Collection { return $this->playerAliases; }
+    public function addPlayerAlias(GamePlayerAlias $alias): self {
+        if (!$this->playerAliases->contains($alias)) {
+            $this->playerAliases[] = $alias;
+            $alias->setGame($this);
+        }
+        return $this;
+    }
 }

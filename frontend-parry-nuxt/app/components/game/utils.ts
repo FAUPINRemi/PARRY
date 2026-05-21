@@ -1,12 +1,5 @@
 import type { Player } from '@/components/game/types'
 
-export const ALIASES = [
-	'Renard', 'Loup', 'Corbeau', 'Serpent', 'Tigre',
-	'Faucon', 'Ours', 'Vipère', 'Lynx', 'Puma',
-	'Aigle', 'Requin', 'Panthère', 'Scorpion', 'Coyote',
-	'Hibou', 'Jaguar', 'Raton', 'Baleine', 'Vautour'
-] as const
-
 export function playerAlias(
 	playerId: string,
 	players: Player[],
@@ -14,12 +7,23 @@ export function playerAlias(
 ): string {
 	if (!playerId) return '???'
 
-	const visibleIds = players
-		.map(p => p.id)
-		.sort()
+	const player = players.find(p => p.id === playerId)
+	if (!player) return '???'
 
-	const idx = visibleIds.indexOf(playerId)
-	return idx >= 0 ? (ALIASES[idx % ALIASES.length] ?? '???') : '???'
+	return player.alias || '???'
+}
+
+export function playerSpriteUrl(
+	playerId: string,
+	spriteType: 'response' | 'question' | 'elimination',
+	players: Player[]
+): string | undefined {
+	if (!playerId) return undefined
+
+	const player = players.find(p => p.id === playerId)
+	if (!player || !player.sprites) return undefined
+
+	return player.sprites[spriteType]
 }
 
 export function jwt() {

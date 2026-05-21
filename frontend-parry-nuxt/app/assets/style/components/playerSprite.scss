@@ -1,0 +1,22 @@
+// TEST_GAME - Animation spritesheet 4x2 (8 frames) pour le sprite du joueur
+@keyframes playerSpriteWait {
+  0% { background-position: 0 0; }
+  12.5% { background-position: -32px 0; }
+  25% { background-position: -64px 0; }
+  37.5% { background-position: -96px 0; }
+  50% { background-position: 0 -32px; }
+  62.5% { background-position: -32px -32px; }
+  75% { background-position: -64px -32px; }
+  87.5% { background-position: -96px -32px; }
+}
+
+.playerSprite {
+  width: 32px;
+  height: 32px;
+  background-size: 128px 64px;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: playerSpriteWait 1200ms steps(1) infinite;
+}

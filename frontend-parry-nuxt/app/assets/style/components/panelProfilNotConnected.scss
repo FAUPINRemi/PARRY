@@ -1,6 +1,7 @@
 @use "../util/media-queries" as *;
 @use "./../util/spacing";
 @use "./../util/font-sizes";
+@use "./../util/colors";
 
 /* ---- Etat connecté ---- */
 .panelProfil--connected {
@@ -131,7 +132,7 @@
 
 .profil-message {
 	font-size: 0.9rem;
-	color: #555;
+	color: colors.$accent-main;
 }
 
 .profil-form {
@@ -146,17 +147,30 @@
 	flex-direction: column;
 	gap: 0.25rem;
 
-	label { font-size: 0.8rem; color: #666; }
+	label { font-size: 0.8rem; color: colors.$accent-main; }
+
+	input {
+		background-color: colors.$shade-010;
+		color: colors.$accent-main;
+
+		&::placeholder {
+			color: colors.$shade-050;
+		}
+
+		&:focus {
+			background-color: colors.$shade-020;
+		}
+	}
 }
 
 .profil-switch {
 	width: 100%;
 	background: none;
-	border: 1px solid #2a2a2a;
-	color: #555;
+	border: 1px solid colors.$shade-030;
+	color: colors.$accent-main;
 	font-size: 0.85rem;
 
-	&:hover { border-color: #444; color: #aaa; }
+	&:hover { border-color: colors.$shade-050; color: colors.$shade-100; }
 }
 
 .profil-error {

@@ -3,8 +3,11 @@
 namespace App\Service\Game;
 
 use App\Entity\Game;
+use App\Entity\GamePlayerAlias;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Repository\AnimalConfigRepository;
+use App\Repository\GamePlayerAliasRepository;
 use App\Repository\GameRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\GameRedisService;
@@ -20,7 +23,9 @@ class GameService
         private readonly EntityManagerInterface $entityManager,
         private readonly GameRepository $gameRepository,
         private readonly GameRedisService $gameRedisService,
-        private readonly MercurePublisherService $mercurePublisher
+        private readonly MercurePublisherService $mercurePublisher,
+        private readonly AnimalConfigRepository $animalConfigRepository,
+        private readonly GamePlayerAliasRepository $gamePlayerAliasRepository,
     ) {}
 
     public function createGame(bool $isPrivate = false, ?string $creatorUserId = null): Game {
@@ -79,10 +84,23 @@ class GameService
         $this->entityManager->flush();
 
         $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
-        $this->gameRedisService->addPlayer($gameIdentifier, $user->getId()->toString(), $user->getPseudo(), false);
+
+        $playerAlias = $this->assignRandomAlias($game, $user);
+        $animalConfig = $playerAlias->getAnimalConfig();
+
+        $this->gameRedisService->addPlayer(
+            $gameIdentifier,
+            $user->getId()->toString(),
+            $user->getPseudo(),
+            false,
+            $animalConfig->getAlias(),
+            $animalConfig->getResponseSprite(),
+            $animalConfig->getQuestionSprite(),
+            $animalConfig->getEliminationSprite()
+        );
 
         // Mémorise la partie active de l'utilisateur (pour reconnexion)
-        $this->gameRedisService->getRedis()->setex('user:' . $user->getId()->toString() . ':activeGame', 86400, $game->getCode() ?? $game->getId()->toString());
+        $this->gameRedisService->getRedis()->setex('user:' . $user->getId()->toString() . ':activeGame', 86400, $gameIdentifier);
     }
 
     public function debutGame(Game $game): void {
@@ -111,7 +129,20 @@ class GameService
         $this->entityManager->flush();
 
         $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
-        $this->gameRedisService->addPlayer($gameIdentifier, $aiUser->getId()->toString(), $aiUser->getPseudo(), true);
+
+        $playerAlias = $this->assignRandomAlias($game, $aiUser);
+        $animalConfig = $playerAlias->getAnimalConfig();
+
+        $this->gameRedisService->addPlayer(
+            $gameIdentifier,
+            $aiUser->getId()->toString(),
+            $aiUser->getPseudo(),
+            true,
+            $animalConfig->getAlias(),
+            $animalConfig->getResponseSprite(),
+            $animalConfig->getQuestionSprite(),
+            $animalConfig->getEliminationSprite()
+        );
     }
 
     public function victorireCondition(Game $game): ?string {
@@ -241,5 +272,30 @@ class GameService
         // Reset statut Redis
         $redis->hset("game:{$identifier}", 'status', 'waiting');
         $redis->hset("game:{$identifier}", 'currentRound', 0);
+    }
+
+    private function assignRandomAlias(Game $game, User $user): GamePlayerAlias
+    {
+        $allAnimals = $this->animalConfigRepository->findAll();
+        $usedAliases = $this->gamePlayerAliasRepository->findUsedAliasesInGame($game);
+
+        $usedAnimalIds = array_map(fn($a) => $a->getAnimalConfig()->getId(), $usedAliases);
+        $availableAnimals = array_filter($allAnimals, fn($animal) => !in_array($animal->getId(), $usedAnimalIds));
+
+        if (empty($availableAnimals)) {
+            throw new \RuntimeException('PAS_D_ALIAS_DISPONIBLE', 400);
+        }
+
+        $randomAnimal = $availableAnimals[array_rand($availableAnimals)];
+
+        $playerAlias = new GamePlayerAlias();
+        $playerAlias->setGame($game);
+        $playerAlias->setPlayer($user);
+        $playerAlias->setAnimalConfig($randomAnimal);
+
+        $this->entityManager->persist($playerAlias);
+        $this->entityManager->flush();
+
+        return $playerAlias;
     }
 }

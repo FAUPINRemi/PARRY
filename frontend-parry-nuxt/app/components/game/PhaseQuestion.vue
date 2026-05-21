@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import QuestionSprite from '@/components/game/QuestionSprite.vue'
+
 const props = defineProps<{
 	roundNumber: number
 	isMyTurnToAsk: boolean
 	questionMasterId: string | null
 	playerAlias: (playerId: string) => string
+	questionSpriteUrl?: string
 }>()
 </script>
 
@@ -21,5 +24,9 @@ const props = defineProps<{
 			est en train de poser la question…
 		</p>
 		<div class="loading-dots"><span></span><span></span><span></span></div>
+	</div>
+
+	<div v-if="!isMyTurnToAsk && questionSpriteUrl" class="question-sprite-container">
+		<QuestionSprite :sprite-url="questionSpriteUrl" />
 	</div>
 </template>

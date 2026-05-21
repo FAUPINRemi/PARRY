@@ -41,6 +41,7 @@ const {
 	isMyTurnToAsk,
 	amIAlive,
 	playerAlias,
+	playerSpriteUrl,
 
 	startGame,
 	submitVote,
@@ -78,6 +79,7 @@ const {
 						:isMyTurnToAsk="isMyTurnToAsk"
 						:questionMasterId="questionMasterId"
 						:playerAlias="playerAlias"
+						:questionSpriteUrl="questionMasterId ? playerSpriteUrl(questionMasterId, 'question') : undefined"
 					/>
 
 					<PhaseResponses
@@ -87,6 +89,8 @@ const {
 						:hasAnswered="hasAnswered"
 						:answeredCount="answeredCount"
 						:totalAlive="totalAlive"
+						:playerAlias="myUserId ? playerAlias(myUserId) : undefined"
+						:playerSpriteUrl="myUserId ? playerSpriteUrl(myUserId, 'response') : undefined"
 					/>
 
 					<PhaseVote
@@ -107,6 +111,7 @@ const {
 						v-else-if="roundStatus === 'termine'"
 						:players="players"
 						:eliminatedPlayerId="eliminatedPlayerId"
+						:eliminationSpriteUrl="eliminatedPlayerId ? playerSpriteUrl(eliminatedPlayerId, 'elimination') : undefined"
 					/>
 				</template>
 

@@ -10,7 +10,7 @@ import type {
 	Winner
 } from '@/components/game/types'
 
-import { authHeaders, playerAlias as playerAliasUtil } from '@/components/game/utils'
+import { authHeaders, playerAlias as playerAliasUtil, playerSpriteUrl as playerSpriteUrlUtil } from '@/components/game/utils'
 
 export function useGame() {
 	const { emitEvent, setTerminalAction, onTerminalSubmit } = useTerminal()
@@ -79,6 +79,10 @@ export function useGame() {
 
 	function playerAlias(playerId: string): string {
 		return playerAliasUtil(playerId, players.value, myUserId.value)
+	}
+
+	function playerSpriteUrl(playerId: string, spriteType: 'response' | 'question' | 'elimination'): string | undefined {
+		return playerSpriteUrlUtil(playerId, spriteType, players.value)
 	}
 
 	let pollInterval: ReturnType<typeof setInterval> | null = null
@@ -721,6 +725,7 @@ export function useGame() {
 		deadPlayers,
 		amIAlive,
 		playerAlias,
+		playerSpriteUrl,
 
 		startGame,
 		submitVote,
