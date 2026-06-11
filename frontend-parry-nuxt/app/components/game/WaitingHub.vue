@@ -19,6 +19,7 @@ const props = defineProps<{
 const emit = defineEmits<{
 	(e: 'update:enableProAI', value: boolean): void
 	(e: 'startGame'): void
+	(e: 'quitGame'): void
 }>()
 
 function onToggle(e: Event) {
@@ -102,6 +103,11 @@ async function onMicToggle(e: Event) {
 		<p v-if="players.length < 3" class="hub-hint">
 			 {{ players.length }}  joueur(s) supplémentaire(s) requis
 		</p>
+
+		<button class="gButton hub-quit-btn" @click="$emit('quitGame')">
+			<Icon name="pixelarticons:close" />
+			Quitter la partie
+		</button>
 	</div>
 
 	<div v-else class="hub-waiting">

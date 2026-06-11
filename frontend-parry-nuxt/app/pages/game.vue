@@ -69,6 +69,7 @@ const {
 						:enableProAI="enableProAI"
 						@update:enableProAI="enableProAI = $event"
 						@startGame="startGame"
+						@quitGame="goToMenu"
 					/>
 				</template>
 
