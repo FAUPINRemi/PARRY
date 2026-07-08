@@ -201,12 +201,10 @@ class GameController extends AbstractController
                 $this->entityManager->flush();
             }
 
-            $this->gameService->debutGame($game);
-
             // Ajouter l'IA comme joueur
             $this->gameService->addAIPlayer($game, $aiUser);
 
-            // Ajout du rôle Pro-IA si activé
+            // Fait avant debutGame() pour que "proai" existe déjà quand l'event Mercure est publié
             if ($proAiEnabled) {
                 $identifier = $game->getCode() ?? $game->getId()->toString();
                 $redis = $this->gameRedisService->getRedis();
@@ -222,9 +220,11 @@ class GameController extends AbstractController
 
                 if (!empty($humanIds)) {
                     $proAiId = $humanIds[array_rand($humanIds)];
-                    $redis->set("game:{$identifier}:proai", $proAiId, ['ex' => 86400]);
+                    $redis->setex("game:{$identifier}:proai", 86400, $proAiId);
                 }
             }
+
+            $this->gameService->debutGame($game);
 
             return $this->json(['success' => true, 'message' => 'Partie démarrée'], 200);
         } catch (\RuntimeException $e) {

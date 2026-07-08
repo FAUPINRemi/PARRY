@@ -67,7 +67,12 @@ export function useGame() {
 	let aiTriggerTime = 0
 	let aiResponseTriggerRound = ''
 	let aiResponseTriggerTime = 0
+	let aiVoteTriggerRound = ''
+	let aiVoteTriggerTime = 0
 	const AI_RETRY_INTERVAL = 10_000
+
+	let finishRevealTimer: ReturnType<typeof setTimeout> | null = null
+	const FINISH_REVEAL_DELAY = 4000
 
 	const isMyTurnToAsk = computed(() => questionMasterId.value === myUserId.value)
 
@@ -136,9 +141,10 @@ export function useGame() {
 			const prevRoundStatus = roundStatus.value
 			const prevRoundId = roundId.value
 			const prevAnsweredCount = answeredCount.value
+			const prevVotedCount = votedCount.value
 			const prevRevoteCandidates = revoteCandidates.value
 
-			gameStatus.value = data.game.status
+			const incomingStatus: GameStatus = data.game.status
 			players.value = data.game.players || []
 
 			if (data.game.isCreator === true) isCreator.value = true
@@ -201,6 +207,19 @@ export function useGame() {
 				roundStatus.value = null
 			}
 
+			// Laisse l'écran d'élimination visible un instant avant de révéler la fin de partie
+			if (incomingStatus === 'finished' && gameStatus.value !== 'finished') {
+				if (!finishRevealTimer) {
+					finishRevealTimer = setTimeout(() => {
+						finishRevealTimer = null
+						gameStatus.value = 'finished'
+						onGameStatusChange('finished')
+					}, FINISH_REVEAL_DELAY)
+				}
+			} else if (incomingStatus !== 'finished') {
+				gameStatus.value = incomingStatus
+			}
+
 			if (isCreator.value && roundStatus.value === 'termine' && roundId.value) {
 				if (!eliminatedPlayerId.value && !eliminationInFlight.value) {
 					runElimination()
@@ -240,6 +259,16 @@ export function useGame() {
 				if (answeredChanged || roundId.value !== aiResponseTriggerRound || now - aiResponseTriggerTime > AI_RETRY_INTERVAL) {
 					aiResponseTriggerRound = roundId.value
 					aiResponseTriggerTime = now
+					triggerAI()
+				}
+			}
+
+			if (isCreator.value && roundStatus.value === 'en_attente_votes' && roundId.value) {
+				const now = Date.now()
+				const votedChanged = votedCount.value !== prevVotedCount
+				if (votedChanged || roundId.value !== aiVoteTriggerRound || now - aiVoteTriggerTime > AI_RETRY_INTERVAL) {
+					aiVoteTriggerRound = roundId.value
+					aiVoteTriggerTime = now
 					triggerAI()
 				}
 			}
@@ -704,6 +733,7 @@ export function useGame() {
 	onUnmounted(() => {
 		if (pollInterval) clearInterval(pollInterval)
 		if (roleRevealTimer) clearTimeout(roleRevealTimer)
+		if (finishRevealTimer) clearTimeout(finishRevealTimer)
 		if (unsubTerminal) unsubTerminal()
 		mercureDisconnect()
 		if (handleBeforeUnload) {

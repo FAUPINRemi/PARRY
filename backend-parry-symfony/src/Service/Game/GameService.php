@@ -104,9 +104,14 @@ class GameService
     }
 
     public function debutGame(Game $game): void {
-        $playerCount = $game->getPlayers()->count();
+        $humanCount = 0;
+        foreach ($game->getPlayers() as $player) {
+            if (!in_array('ROLE_AI', $player->getRoles())) {
+                $humanCount++;
+            }
+        }
 
-        if ($playerCount < self::MIN_PLAYERS) {
+        if ($humanCount < self::MIN_PLAYERS) {
             throw new \RuntimeException('PAS_ASSEZ_DE_JOUEURS', 400);
         }
 
