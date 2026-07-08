@@ -9,7 +9,7 @@ class ModerationAI
     private array $cache = []; 
     
     public function __construct(
-        private readonly GeminiClient $geminiClient
+        private readonly VertexAiClient $vertexClient
     ) {}
     
     /**
@@ -25,7 +25,7 @@ class ModerationAI
         
         $prompt = $this->buildPrompt($content, $contentType);
         
-        $responseText = $this->geminiClient->generate(
+        $responseText = $this->vertexClient->generate(
             $prompt,
             self::TEMPERATURE,
             self::MAX_TOKENS

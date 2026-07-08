@@ -119,7 +119,6 @@ export function useGame() {
 			const data = await res.json()
 			if (!data.success) return
 
-			// Un joueur a quitté en cours de partie → retour accueil pour tous
 			if (data.game.abandoned === true) {
 				const reason = data.game.abandonedReason
 				await cancelGameAndReturnHome(
@@ -343,6 +342,7 @@ export function useGame() {
 		}
 	}
 
+	// Déclenche l'action de l'IA (question/réponse/vote) après un délai
 	async function triggerAI(delayMs = 0) {
 		if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs))
 
@@ -381,6 +381,7 @@ export function useGame() {
 		}
 	}
 
+	// Calcule les votes et élimine le joueur ciblé
 	async function runElimination() {
 		if (!roundId.value) return
 		if (eliminationInFlight.value) return
@@ -438,6 +439,7 @@ export function useGame() {
 		}
 	}
 
+	// Vérifie si les conditions de victoire sont atteintes
 	async function checkVictory(): Promise<boolean> {
 		try {
 			const res = await apiFetch(`/api/game/${gameCode.value}/check-victory`, {
@@ -553,6 +555,7 @@ export function useGame() {
 		}
 	}
 
+	// Envoie le vote du joueur au backend
 	async function submitVote(targetPlayerId: string) {
 		if (!roundId.value || !myUserId.value || hasVoted.value) return
 
@@ -628,6 +631,7 @@ export function useGame() {
 
 	let intentionalLeave = false
 
+	// Notifie le serveur qu'on quitte la partie (sendBeacon)
 	function sendLeaveBeacon() {
 		if (intentionalLeave || !gameCode.value) return
 		const config = useRuntimeConfig()

@@ -41,8 +41,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'string')]
     private ?string $password = null;
 
-    // --- AJOUT : avatar en base64 + mime ---
-    // On stocke UNIQUEMENT le base64 brut (sans "data:image/png;base64,").
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $avatarBase64 = null;
 

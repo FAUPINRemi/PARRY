@@ -8,7 +8,7 @@ class MonitoringAI
     private const MAX_TOKENS = 800;
     
     public function __construct(
-        private readonly GeminiClient $geminiClient
+        private readonly VertexAiClient $vertexClient
     ) {}
     
     /**
@@ -21,7 +21,7 @@ class MonitoringAI
     {
         $prompt = $this->buildAnalysisPrompt($roundData, $gameHistory);
         
-        $responseText = $this->geminiClient->generate(
+        $responseText = $this->vertexClient->generate(
             $prompt,
             self::TEMPERATURE,
             self::MAX_TOKENS

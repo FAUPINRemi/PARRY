@@ -5,7 +5,7 @@ namespace App\Service\AI;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-class GeminiTTSService
+class VertexAiTTSService
 {
     // Voix disponibles : Aoede, Charon, Fenrir, Kore, Puck
     private const VOICE_NAME = 'Charon';
@@ -13,9 +13,10 @@ class GeminiTTSService
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly LoggerInterface $logger,
-        private readonly string $apiUrl,
-        private readonly string $apiKey,
+        private readonly string $projectId,
+        private readonly string $location,
         private readonly string $ttsModel,
+        private readonly string $apiKey,
         private readonly ?BudgetGuard $budgetGuard = null
     ) {}
 
@@ -25,19 +26,27 @@ class GeminiTTSService
      */
     public function synthesize(string $text): string
     {
-        $this->logger->warning('[GEMINI_TTS_OUT] Synthèse vocale envoyée à Google AI Studio.');
+        $this->logger->warning('[VERTEX_TTS_OUT] Synthèse vocale envoyée à Vertex AI.');
 
         if ($this->budgetGuard && !$this->budgetGuard->canMakeRequest()) {
-            $this->logger->error('[GEMINI_TTS_OUT] Synthèse annulée : BudgetGuard a bloqué l\'appel.');
+            $this->logger->error('[VERTEX_TTS_OUT] Synthèse annulée : BudgetGuard a bloqué l\'appel.');
             throw new \RuntimeException('Budget mensuel atteint.');
         }
 
         try {
-            $url = rtrim($this->apiUrl, '/') . '/' . $this->ttsModel . ':generateContent?key=' . $this->apiKey;
+            $url = sprintf(
+                'https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent?key=%s',
+                $this->location,
+                $this->projectId,
+                $this->location,
+                $this->ttsModel,
+                $this->apiKey
+            );
 
             $response = $this->httpClient->request('POST', $url, [
                 'json' => [
                     'contents' => [[
+                        'role' => 'user',
                         'parts' => [['text' => $text]],
                     ]],
                     'generationConfig' => [
@@ -59,7 +68,7 @@ class GeminiTTSService
             $audioBase64 = $data['candidates'][0]['content']['parts'][0]['inlineData']['data'] ?? '';
 
             if ($audioBase64 === '') {
-                throw new \RuntimeException('Réponse TTS vide de l\'API Gemini.');
+                throw new \RuntimeException('Réponse TTS vide de l\'API Vertex AI.');
             }
 
             if ($this->budgetGuard) {
@@ -69,7 +78,7 @@ class GeminiTTSService
             return $audioBase64;
 
         } catch (\Exception $e) {
-            $this->logger->critical('[GEMINI_TTS_OUT] Erreur synthèse vocale : ' . $e->getMessage());
+            $this->logger->critical('[VERTEX_TTS_OUT] Erreur synthèse vocale : ' . $e->getMessage());
             throw $e;
         }
     }

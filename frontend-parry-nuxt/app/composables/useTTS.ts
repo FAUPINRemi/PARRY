@@ -1,4 +1,3 @@
-// AudioContext survit entre les appels (évite la recréation à chaque synthèse)
 let audioContext: AudioContext | null = null
 let currentSource: AudioBufferSourceNode | null = null
 
@@ -9,21 +8,16 @@ export function useTTS() {
     const isSpeaking = useState<boolean>('tts:speaking', () => false)
 
     function getAudioContext(): AudioContext {
-        // AudioContext avec 24kHz car Gemini TTS retourne du PCM 24kHz
         if (!audioContext || audioContext.state === 'closed') {
             audioContext = new AudioContext({ sampleRate: 24000 })
         }
         return audioContext
     }
 
-    /**
-     * Envoie le texte à /api/tts et joue l'audio reçu.
-     * L'audio retourné est du PCM 16-bit 24kHz mono encodé en base64.
-     */
+    // Récupère l'audio TTS du backend et le joue via Web Audio
     async function speak(text: string): Promise<void> {
         if (!import.meta.client || !ttsEnabled.value || !text.trim()) return
 
-        // Arrête la synthèse en cours si elle existe
         stop()
         isSpeaking.value = true
 
@@ -40,14 +34,12 @@ export function useTTS() {
                 return
             }
 
-            // base64 → Uint8Array
             const binaryStr = atob(data.audio)
             const bytes = new Uint8Array(binaryStr.length)
             for (let i = 0; i < binaryStr.length; i++) {
                 bytes[i] = binaryStr.charCodeAt(i)
             }
 
-            // PCM 16-bit signé → Float32 [-1, 1] pour Web Audio API
             const int16 = new Int16Array(bytes.buffer)
             const float32 = new Float32Array(int16.length)
             for (let i = 0; i < int16.length; i++) {
@@ -56,7 +48,6 @@ export function useTTS() {
 
             const ctx = getAudioContext()
 
-            // Reprend le contexte s'il est suspendu (politique autoplay navigateur)
             if (ctx.state === 'suspended') {
                 await ctx.resume()
             }
@@ -78,9 +69,7 @@ export function useTTS() {
         }
     }
 
-    /**
-     * Arrête la lecture en cours immédiatement.
-     */
+     // Coupe la lecture audio en cours
     function stop(): void {
         if (currentSource) {
             try { currentSource.stop() } catch { /* déjà arrêté */ }

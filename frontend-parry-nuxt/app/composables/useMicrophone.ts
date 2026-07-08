@@ -1,4 +1,3 @@
-// Variables hors du composable — survivent entre les appels au sein de la même session de navigation
 let mediaRecorder: MediaRecorder | null = null
 let audioChunks: Blob[] = []
 let currentStream: MediaStream | null = null
@@ -6,16 +5,12 @@ let currentStream: MediaStream | null = null
 export function useMicrophone() {
     const { apiFetch } = useApi()
 
-    // useState = partagé entre tous les composants qui appellent useMicrophone()
     const micEnabled     = useState<boolean>('mic:enabled',      () => false)
     const hasPermission  = useState<boolean>('mic:hasPermission', () => false)
     const isRecording    = useState<boolean>('mic:isRecording',   () => false)
     const isTranscribing = useState<boolean>('mic:isTranscribing', () => false)
 
-    /**
-     * Demande la permission micro au navigateur.
-     * Teste immédiatement en ouvrant + fermant le stream (ne garde pas la piste active).
-     */
+    // Demande l'accès au micro et active l'état si accordé
     async function requestPermission(): Promise<boolean> {
         if (!import.meta.client) return false
 
@@ -32,9 +27,7 @@ export function useMicrophone() {
         }
     }
 
-    /**
-     * Désactive le micro — arrête les pistes et remet les flags à false.
-     */
+    // Coupe le micro et arrête le flux audio en cours
     function disableMic(): void {
         micEnabled.value    = false
         hasPermission.value = false
@@ -44,11 +37,7 @@ export function useMicrophone() {
         }
     }
 
-    /**
-     * Démarre l'enregistrement. Ré-ouvre un stream à chaque fois
-     * (permission déjà accordée → pas de dialog navigateur).
-     * L'indicateur d'enregistrement du navigateur n'est visible que pendant la capture.
-     */
+    // Démarre l'enregistrement (choisit le meilleur format supporté)
     async function startRecording(): Promise<void> {
         if (!import.meta.client || isRecording.value) return
 
@@ -75,10 +64,7 @@ export function useMicrophone() {
         }
     }
 
-    /**
-     * Arrête l'enregistrement, convertit en base64 et appelle /api/stt.
-     * Résout avec la transcription ou rejette en cas d'erreur.
-     */
+    // Arrête l'enregistrement puis envoie l'audio au backend pour transcription
     function stopAndTranscribe(): Promise<string> {
         return new Promise((resolve, reject) => {
             if (!mediaRecorder || !isRecording.value) {
@@ -87,7 +73,6 @@ export function useMicrophone() {
             }
 
             mediaRecorder.onstop = async () => {
-                // Ferme les pistes → plus d'indicateur d'enregistrement
                 if (currentStream) {
                     currentStream.getTracks().forEach(t => t.stop())
                     currentStream = null
@@ -96,7 +81,6 @@ export function useMicrophone() {
                 isRecording.value    = false
                 isTranscribing.value = true
 
-                // mime_type sans codec pour Gemini (ex: "audio/webm" pas "audio/webm;codecs=opus")
                 const fullMime   = mediaRecorder?.mimeType || 'audio/webm'
                 const simpleMime = fullMime.split(';')[0]
                 const blob       = new Blob(audioChunks, { type: simpleMime })

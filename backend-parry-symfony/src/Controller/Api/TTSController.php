@@ -2,7 +2,7 @@
 
 namespace App\Controller\Api;
 
-use App\Service\AI\GeminiTTSService;
+use App\Service\AI\VertexAiTTSService;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -12,11 +12,10 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/tts')]
 class TTSController extends AbstractController
 {
-    // ~500 caractères = une question de jeu longue
     private const MAX_TEXT_LENGTH = 500;
 
     public function __construct(
-        private readonly GeminiTTSService $geminiTTSService,
+        private readonly VertexAiTTSService $vertexAiTTSService,
     ) {}
 
     #[Route('', name: 'api_tts', methods: ['POST'])]
@@ -47,7 +46,7 @@ class TTSController extends AbstractController
         }
 
         try {
-            $audioBase64 = $this->geminiTTSService->synthesize($text);
+            $audioBase64 = $this->vertexAiTTSService->synthesize($text);
             return $this->json([
                 'success'  => true,
                 'audio'    => $audioBase64,

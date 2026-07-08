@@ -7,7 +7,6 @@ const { initFromStorage, forceLogout, isLoggedIn } = useAuth()
 const { sessionExpired } = useApi()
 const router = useRouter()
 
-// Si une requête API renvoie 401 et que l'utilisateur était connecté → session expirée
 watch(sessionExpired, (val) => {
 	if (val && isLoggedIn.value) {
 		forceLogout()

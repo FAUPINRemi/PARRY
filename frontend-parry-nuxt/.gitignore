@@ -10,8 +10,8 @@ CLAUDE.md
 .env.local
 .env.*.local
 .env
-.env.example
 .env.*
+!.env.example
 
 # TEST_GAME - Dossiers de test (à supprimer avant production)
 app/components/test/

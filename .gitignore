@@ -20,12 +20,9 @@ CLAUDE.md
 .vscode/
 *.swp
 
-# .env 
+# .env
 .env.local
 .env.*.local
-.env
-.env.example
-.env.*
 
 ###################
 #### FRONT-END ####
@@ -55,3 +52,6 @@ frontend-parry-nuxt/.idea
 frontend-parry-nuxt/.env
 frontend-parry-nuxt/.env.*
 frontend-parry-nuxt/!.env.example
+
+CLAUDE.md 
+.claude/
