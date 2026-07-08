@@ -48,6 +48,9 @@ export function useGame() {
 	const hasAnswered = ref(false)
 	const hasVoted = ref(false)
 	const enableProAI = ref(false)
+	const proAiEnabled = ref(false)
+	const showRoleReveal = ref(false)
+	let roleRevealTimer: ReturnType<typeof setTimeout> | null = null
 
 	const startCountdown = ref(0)
 
@@ -143,7 +146,10 @@ export function useGame() {
 
 			if (data.game.winner === 'players') winner.value = 'PLAYERS_WIN'
 			else if (data.game.winner === 'ai') winner.value = 'AI_WINS'
+			else if (data.game.winner === 'pro_ia') winner.value = 'PRO_IA_WINS'
 			else winner.value = null
+
+			proAiEnabled.value = data.game.proAiEnabled === true
 
 			if (data.game.round) {
 				const r = data.game.round
@@ -249,10 +255,19 @@ export function useGame() {
 		}
 	}
 
-	function onGameStatusChange(status: GameStatus) {
+	async function onGameStatusChange(status: GameStatus) {
 		if (status === 'in_progress') {
 			emitEvent({ message: 'La partie a commencé !', type: 'success' })
-			fetchMyRole()
+			await fetchMyRole()
+
+			if (proAiEnabled.value) {
+				showRoleReveal.value = true
+				if (roleRevealTimer) clearTimeout(roleRevealTimer)
+				roleRevealTimer = setTimeout(() => {
+					showRoleReveal.value = false
+					roleRevealTimer = null
+				}, 7000)
+			}
 
 			if (isCreator.value && !roundCreating.value) {
 				roundCreating.value = true
@@ -260,10 +275,19 @@ export function useGame() {
 			}
 		} else if (status === 'finished') {
 			setTerminalAction(null)
-			emitEvent({
-				message: winner.value === 'PLAYERS_WIN' ? 'Les joueurs ont gagné !' : "L'IA a gagné !",
-				type: 'success'
-			})
+
+			let message: string
+			if (winner.value === 'PRO_IA_WINS') {
+				message = myRole.value === 'proai'
+					? 'Vous avez été éliminé en premier, exactement comme prévu. Vous gagnez !'
+					: 'Le Pro-IA a été éliminé en premier... et remporte la partie !'
+			} else if (winner.value === 'PLAYERS_WIN') {
+				message = 'Les joueurs ont gagné !'
+			} else {
+				message = "L'IA a gagné !"
+			}
+
+			emitEvent({ message, type: 'success' })
 		}
 	}
 
@@ -492,10 +516,8 @@ export function useGame() {
 	}
 
 	async function fetchMyRole() {
-		if (!myUserId.value) return
-
 		try {
-			const res = await apiFetch(`/api/game/${gameCode.value}/my-role?userId=${myUserId.value}`, {
+			const res = await apiFetch(`/api/game/${gameCode.value}/my-role`, {
 				headers: authHeaders()
 			})
 			const data = await res.json()
@@ -681,6 +703,7 @@ export function useGame() {
 
 	onUnmounted(() => {
 		if (pollInterval) clearInterval(pollInterval)
+		if (roleRevealTimer) clearTimeout(roleRevealTimer)
 		if (unsubTerminal) unsubTerminal()
 		mercureDisconnect()
 		if (handleBeforeUnload) {
@@ -722,6 +745,8 @@ export function useGame() {
 		hasAnswered,
 		hasVoted,
 		enableProAI,
+		proAiEnabled,
+		showRoleReveal,
 		startCountdown,
 
 		isMyTurnToAsk,

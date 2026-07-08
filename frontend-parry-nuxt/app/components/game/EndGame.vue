@@ -13,6 +13,8 @@ const props = defineProps<{
 }>()
 
 const isPlayersWin = computed(() => props.winner === 'PLAYERS_WIN')
+const isProAiWin = computed(() => props.winner === 'PRO_IA_WINS')
+const iAmTheWinningProAi = computed(() => isProAiWin.value && props.myRole === 'proai')
 
 const ASCII_WIN = `
   _   _ ___ ____ _____ ___  ___ ___ _  _____   _
@@ -36,6 +38,23 @@ const AI_MESSAGE = `
 
 
    J  e     g  a  g  n  e     t  o  u  j  o  u  r  s  .
+
+
+  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _`
+
+const PROAI_TRICK_MESSAGE = `
+  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _
+
+        M  e  r  c  i  .           M  e  r  c  i  .           M  e  r  c  i  .
+
+  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _
+
+
+   V  o  u  s     a  v  e  z     é  l  i  m  i  n  é     l  a
+   m  a  u  v  a  i  s  e     p  e  r  s  o  n  n  e  .
+
+
+   L  e     P  r  o  -  I  A     g  a  g  n  e  .
 
 
   _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _`
@@ -91,7 +110,9 @@ function startGlitchReveal(target: string) {
 }
 
 onMounted(() => {
-	if (!isPlayersWin.value) {
+	if (isProAiWin.value && !iAmTheWinningProAi.value) {
+		startGlitchReveal(PROAI_TRICK_MESSAGE)
+	} else if (!isPlayersWin.value && !isProAiWin.value) {
 		startGlitchReveal(AI_MESSAGE)
 	}
 })
@@ -102,9 +123,32 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<div class="endGame" :class="isPlayersWin ? 'endGame--win' : 'endGame--lose'">
+	<div
+		class="endGame"
+		:class="isProAiWin ? (iAmTheWinningProAi ? 'endGame--proai-win' : 'endGame--proai-lose') : (isPlayersWin ? 'endGame--win' : 'endGame--lose')"
+	>
 
-		<template v-if="isPlayersWin">
+		<template v-if="isProAiWin">
+			<template v-if="iAmTheWinningProAi">
+				<pre class="endGame-ascii endGame-ascii--proai">{{ ASCII_WIN }}</pre>
+				<div class="endGame-body endGame-body--proai">
+					<p>Vous avez été éliminé en premier, exactement comme prévu.</p>
+					<p class="endGame-proai">[ ROLE : PRO-IA — mission accomplie ]</p>
+				</div>
+			</template>
+			<template v-else>
+				<div class="endGame-lose-layout">
+					<div class="endGame-lose-left">
+						<pre class="endGame-glitch endGame-glitch--proai">{{ glitchDisplay }}</pre>
+						<div class="endGame-body endGame-body--proai">
+							<p>Le Pro-IA s'est fait éliminer en premier et remporte la partie.</p>
+						</div>
+					</div>
+				</div>
+			</template>
+		</template>
+
+		<template v-else-if="isPlayersWin">
 			<pre class="endGame-ascii endGame-ascii--win">{{ ASCII_WIN }}</pre>
 			<div class="endGame-body endGame-body--win">
 				<p>Les joueurs ont eliminé l'IA.</p>

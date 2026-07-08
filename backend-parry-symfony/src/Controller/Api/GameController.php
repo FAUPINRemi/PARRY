@@ -233,11 +233,12 @@ class GameController extends AbstractController
     }
 
     #[Route('/{code}/my-role', name: 'api_game_my_role', methods: ['GET'])]
-    public function getMyRole(string $code, Request $request): JsonResponse
+    public function getMyRole(string $code): JsonResponse
     {
-        $userId = $request->query->get('userId');
-        if (!$userId) {
-            return $this->json(['success' => true, 'role' => 'player']);
+        /** @var \App\Entity\User|null $user */
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['success' => false, 'error' => 'NON_AUTHENTIFIE'], 401);
         }
 
         $game = $this->gameRepository->findOneBy(['code' => $code]);
@@ -248,7 +249,7 @@ class GameController extends AbstractController
         $identifier = $game->getCode() ?? $game->getId()->toString();
         $proAiId = $this->gameRedisService->getRedis()->get("game:{$identifier}:proai");
 
-        $role = ($proAiId !== null && $proAiId === $userId) ? 'proai' : 'player';
+        $role = ($proAiId !== null && $proAiId === $user->getId()->toString()) ? 'proai' : 'player';
         return $this->json(['success' => true, 'role' => $role]);
     }
 
@@ -439,6 +440,7 @@ class GameController extends AbstractController
                 'myUserId'  => $myUserId,
                 'abandoned' => $abandoned,
                 'abandonedReason' => $abandoned ? $abandonedBy : null,
+                'proAiEnabled' => $redis->exists("game:{$identifier}:proai") > 0,
                 'players'   => $players,
                 'round'     => $roundData,
             ]
