@@ -10,9 +10,9 @@ class AnimalConfigFixtures extends Fixture
 {
     private const ANIMALS = [
         ['corbeau', 'Corbeau', '/images/sprites/response/wait_corbeau.png', '/images/sprites/questions/question_corbeau.png', '/images/sprites/eliminations/dead_corbeau.png'],
-        ['renard', 'Renard', '/images/sprites/response/wait_corbeau.png', '/images/sprites/questions/question_corbeau.png', '/images/sprites/eliminations/dead_corbeau.png'],
-        ['loup', 'Loup', '/images/sprites/response/wait_corbeau.png', '/images/sprites/questions/question_corbeau.png', '/images/sprites/eliminations/dead_corbeau.png'],
-        ['serpent', 'Serpent', '/images/sprites/response/wait_corbeau.png', '/images/sprites/questions/question_corbeau.png', '/images/sprites/eliminations/dead_corbeau.png'],
+        ['renard', 'Renard', '/images/sprites/response/wait_renard.png', '/images/sprites/questions/question_renard.png', '/images/sprites/eliminations/dead_renard.png'],
+        ['loup', 'Loup', '/images/sprites/response/wait_loup.png', '/images/sprites/questions/question_loup.png', '/images/sprites/eliminations/dead_loup.png'],
+        ['serpent', 'Serpent', '/images/sprites/response/wait_serpent.png', '/images/sprites/questions/question_serpent.png', '/images/sprites/eliminations/dead_serpent.png'],
         ['tigre', 'Tigre', '/images/sprites/response/wait_corbeau.png', '/images/sprites/questions/question_corbeau.png', '/images/sprites/eliminations/dead_corbeau.png'],
         ['faucon', 'Faucon', '/images/sprites/response/wait_corbeau.png', '/images/sprites/questions/question_corbeau.png', '/images/sprites/eliminations/dead_corbeau.png'],
         ['ours', 'Ours', '/images/sprites/response/wait_corbeau.png', '/images/sprites/questions/question_corbeau.png', '/images/sprites/eliminations/dead_corbeau.png'],
