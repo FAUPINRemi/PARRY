@@ -104,9 +104,14 @@ class GameService
     }
 
     public function debutGame(Game $game): void {
-        $playerCount = $game->getPlayers()->count();
+        $humanCount = 0;
+        foreach ($game->getPlayers() as $player) {
+            if (!in_array('ROLE_AI', $player->getRoles())) {
+                $humanCount++;
+            }
+        }
 
-        if ($playerCount < self::MIN_PLAYERS) {
+        if ($humanCount < self::MIN_PLAYERS) {
             throw new \RuntimeException('PAS_ASSEZ_DE_JOUEURS', 400);
         }
 
@@ -146,6 +151,20 @@ class GameService
     }
 
     public function victorireCondition(Game $game): ?string {
+        $gameIdentifier = $game->getCode() ?? $game->getId()->toString();
+        $proAiId = $this->gameRedisService->getRedis()->get("game:{$gameIdentifier}:proai");
+
+        if ($proAiId !== null) {
+            $eliminatedRounds = array_values(array_filter(
+                $game->getRounds()->toArray(),
+                fn($round) => $round->getEliminatedPlayer() !== null
+            ));
+
+            if (count($eliminatedRounds) === 1 && $eliminatedRounds[0]->getEliminatedPlayer()->getId()->toString() === $proAiId) {
+                return 'PRO_IA_WINS';
+            }
+        }
+
         $playerOK = 0;
         $iaOK = false;
 
@@ -183,6 +202,8 @@ class GameService
             $game->setWinnerType(\App\Enum\WinnerType::AI);
         } elseif ($winner === 'PLAYERS_WIN') {
             $game->setWinnerType(\App\Enum\WinnerType::PLAYERS);
+        } elseif ($winner === 'PRO_IA_WINS') {
+            $game->setWinnerType(\App\Enum\WinnerType::PRO_IA);
         }
 
         $this->entityManager->flush();

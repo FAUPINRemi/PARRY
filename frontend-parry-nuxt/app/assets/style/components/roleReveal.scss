@@ -1,0 +1,23 @@
+@use "../util/media-queries" as *;
+@use "./../util/colors";
+@use "./../util/spacing";
+@use "./../util/font-sizes";
+
+.roleReveal {
+	display: flex;
+	flex-direction: column;
+	padding: 0.5rem 0;
+
+	&--proai  { --accent: #ff9800; }
+	&--player { --accent: #4caf50; }
+}
+
+.roleReveal-glitch {
+	font-family: monospace;
+	font-size: 0.65rem;
+	line-height: 1.4;
+	white-space: pre;
+	overflow-x: auto;
+	margin: 0;
+	color: var(--accent);
+}
