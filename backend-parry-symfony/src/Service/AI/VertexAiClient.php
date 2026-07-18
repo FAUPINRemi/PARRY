@@ -17,6 +17,12 @@ class VertexAiClient
         private readonly ?BudgetGuard $budgetGuard = null
     ) {}
 
+    // Vérifie que les identifiants Vertex AI sont bien configurés (sans appel réseau)
+    public function isConfigured(): bool
+    {
+        return $this->projectId !== '' && $this->apiKey !== '';
+    }
+
     // Appel texte à Vertex AI, bloqué si le budget mensuel est dépassé
     public function generate(
         string $prompt,

@@ -10,6 +10,8 @@ use App\Repository\GameRepository;
 use App\Repository\RoundRepository;
 use App\Repository\UserRepository;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Service\AI\BudgetGuard;
+use App\Service\AI\VertexAiClient;
 use App\Service\Game\GameService;
 use App\Service\GameRedisService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -30,7 +32,9 @@ class GameController extends AbstractController
         private readonly AnimalConfigRepository $animalConfigRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly GameRedisService $gameRedisService,
-        private readonly UserPasswordHasherInterface $passwordHasher
+        private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly BudgetGuard $budgetGuard,
+        private readonly VertexAiClient $vertexAiClient
     ) {}
 
     #[Route('/create', name: 'api_game_create', methods: ['POST'])]
@@ -141,7 +145,7 @@ class GameController extends AbstractController
         }
 
         try {
-            $game = $this->gameRepository->findOneBy(['code' => $code]);
+            $game = $this->gameRepository->findOneBy(['code' => strtoupper($code)]);
             if (!$game) {
                 return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
             }
@@ -189,6 +193,14 @@ class GameController extends AbstractController
             $game = $this->gameRepository->findOneBy(['code' => $code]);
             if (!$game) {
                 return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+            }
+
+            if (!$this->vertexAiClient->isConfigured()) {
+                return $this->json(['success' => false, 'error' => 'IA_INDISPONIBLE'], 503);
+            }
+
+            if (!$this->budgetGuard->canMakeRequest()) {
+                return $this->json(['success' => false, 'error' => 'IA_BUDGET_ATTEINT'], 429);
             }
 
             // Trouver ou créer le joueur IA
@@ -350,6 +362,12 @@ class GameController extends AbstractController
         $currentUser = $this->getUser();
         if ($currentUser) {
             $myUserId = $currentUser->getId()->toString();
+
+            if ($this->gameService->pruneDisconnectedPlayers($game)) {
+                return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+            }
+            $this->gameService->touchPlayerHeartbeat($game, $myUserId);
+
             $creatorId = $redis->get("game:{$identifier}:creator");
             $isCreator = $creatorId !== null && $creatorId === $myUserId;
         }
@@ -378,6 +396,18 @@ class GameController extends AbstractController
 
             $players[] = $player;
         }
+
+        // Spectateurs depuis Redis
+        $spectatorsRaw = $redis->hgetall("game:{$identifier}:spectators") ?: [];
+        $spectators = [];
+        foreach ($spectatorsRaw as $spectatorId => $spectatorJson) {
+            $s = json_decode($spectatorJson, true);
+            $spectators[] = [
+                'id'       => $spectatorId,
+                'nickname' => $s['nickname'] ?? 'Spectateur',
+            ];
+        }
+        $isSpectator = $myUserId !== null && isset($spectatorsRaw[$myUserId]);
 
         // Round depuis Redis
         $roundRaw = $redis->hgetall("game:{$identifier}:round") ?: [];
@@ -444,6 +474,8 @@ class GameController extends AbstractController
                 'abandonedReason' => $abandoned ? $abandonedBy : null,
                 'proAiEnabled' => $redis->exists("game:{$identifier}:proai") > 0,
                 'players'   => $players,
+                'isSpectator' => $isSpectator,
+                'spectators' => $spectators,
                 'round'     => $roundData,
             ]
         ]);
@@ -509,9 +541,12 @@ class GameController extends AbstractController
         if ($game->getPlayers()->contains($user)) {
             $game->removePlayer($user);
             $this->entityManager->flush();
+            $redis->hdel("game:{$code}:players", [$userId]);
+        } else {
+            // Spectateur : on le retire de la liste des spectateurs
+            $redis->hdel("game:{$code}:spectators", [$userId]);
         }
 
-        $redis->hdel("game:{$code}:players", [$userId]);
         $redis->del(['user:' . $userId . ':activeGame']);
 
         return $this->json(['success' => true, 'removed' => true], 200);

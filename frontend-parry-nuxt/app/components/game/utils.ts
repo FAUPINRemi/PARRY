@@ -13,6 +13,12 @@ export function playerAlias(
 	return player.alias || '???'
 }
 
+const FALLBACK_SPRITES: Record<'response' | 'question' | 'elimination', string> = {
+	response: '/images/sprites/response/wait_corbeau.png',
+	question: '/images/sprites/questions/question_corbeau.png',
+	elimination: '/images/sprites/eliminations/dead_corbeau.png',
+}
+
 export function playerSpriteUrl(
 	playerId: string,
 	spriteType: 'response' | 'question' | 'elimination',
@@ -21,9 +27,9 @@ export function playerSpriteUrl(
 	if (!playerId) return undefined
 
 	const player = players.find(p => p.id === playerId)
-	if (!player || !player.sprites) return undefined
+	if (!player) return undefined
 
-	return player.sprites[spriteType]
+	return player.sprites?.[spriteType] || FALLBACK_SPRITES[spriteType]
 }
 
 export function jwt() {

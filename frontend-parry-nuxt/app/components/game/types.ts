@@ -22,6 +22,11 @@ export interface Player {
 	isAI: boolean
 }
 
+export interface Spectator {
+	id: string
+	nickname: string
+}
+
 export interface AnimalConfig {
 	alias: string
 	animalName: string

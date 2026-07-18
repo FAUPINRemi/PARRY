@@ -5,12 +5,14 @@ import type {
 	GameStatus,
 	RoundStatus,
 	Player,
+	Spectator,
 	Answer,
 	Role,
 	Winner
 } from '@/components/game/types'
 
 import { authHeaders, playerAlias as playerAliasUtil, playerSpriteUrl as playerSpriteUrlUtil } from '@/components/game/utils'
+import { useAuth } from '@/composables/auth/useAuth'
 
 export function useGame() {
 	const { emitEvent, setTerminalAction, onTerminalSubmit } = useTerminal()
@@ -23,6 +25,8 @@ export function useGame() {
 	const gameCode = ref('')
 	const gameStatus = ref<GameStatus>('waiting')
 	const players = ref<Player[]>([])
+	const isSpectator = ref(false)
+	const spectators = ref<Spectator[]>([])
 
 	const roundId = ref<string | null>(null)
 	const roundNumber = ref(0)
@@ -80,6 +84,7 @@ export function useGame() {
 	const deadPlayers = computed(() => players.value.filter((p: Player) => !p.isAlive))
 
 	const amIAlive = computed(() => {
+		if (isSpectator.value) return false
 		if (!myUserId.value) return true
 		const me = players.value.find((p: Player) => p.id === myUserId.value)
 		return me ? me.isAlive : true
@@ -143,9 +148,18 @@ export function useGame() {
 			const prevAnsweredCount = answeredCount.value
 			const prevVotedCount = votedCount.value
 			const prevRevoteCandidates = revoteCandidates.value
+			const prevIsSpectator = isSpectator.value
 
 			const incomingStatus: GameStatus = data.game.status
 			players.value = data.game.players || []
+			spectators.value = data.game.spectators || []
+			isSpectator.value = data.game.isSpectator === true
+
+			if (isSpectator.value && !prevIsSpectator) {
+				emitEvent({ message: 'Vous rejoignez en tant que spectateur — vous deviendrez joueur au prochain lancement de partie.', type: 'info' })
+			} else if (!isSpectator.value && prevIsSpectator) {
+				emitEvent({ message: 'Vous êtes maintenant un joueur actif !', type: 'success' })
+			}
 
 			if (data.game.isCreator === true) isCreator.value = true
 			if (data.game.myUserId && !myUserId.value) myUserId.value = data.game.myUserId
@@ -525,6 +539,13 @@ export function useGame() {
 		return false
 	}
 
+	const START_ERROR_MESSAGES: Record<string, string> = {
+		IA_INDISPONIBLE: "L'IA n'est pas disponible actuellement, impossible de lancer la partie.",
+		IA_BUDGET_ATTEINT: "Le budget mensuel de l'IA est atteint, impossible de lancer la partie.",
+		PAS_D_ALIAS_DISPONIBLE: "Impossible d'attribuer un avatar à l'IA, réessayez ou relancez la partie.",
+		PAS_ASSEZ_DE_JOUEURS: 'Il faut au moins 3 joueurs pour démarrer.',
+	}
+
 	async function startGame() {
 		if (!isCreator.value) return
 
@@ -537,7 +558,7 @@ export function useGame() {
 
 			const data = await res.json()
 			if (!data.success) {
-				emitEvent({ message: data.error || 'Impossible de démarrer', type: 'error' })
+				emitEvent({ message: START_ERROR_MESSAGES[data.error] || data.error || 'Impossible de démarrer', type: 'error' })
 			}
 		} catch {
 			emitEvent({ message: 'Erreur réseau (démarrage)', type: 'error' })
@@ -632,6 +653,14 @@ export function useGame() {
 
 	let unsubTerminal: (() => void) | undefined
 
+	const JOIN_ERROR_MESSAGES: Record<string, string> = {
+		SPECTATEURS_COMPLET: "Trop de spectateurs sont déjà présents sur cette partie, réessayez plus tard.",
+		GAME_FULL: 'Cette partie est complète.',
+		PARTIE_INTROUVABLE: 'Partie introuvable.',
+	}
+
+	const JOIN_SILENT_ERRORS = ['DEJA_REJOINT', 'DEJA_SPECTATEUR']
+
 	async function joinGameIfNeeded() {
 		try {
 			const res = await apiFetch(`/api/game/${gameCode.value}/join`, {
@@ -642,8 +671,8 @@ export function useGame() {
 
 			const data = await res.json()
 
-			if (!data.success && data.error !== 'DEJA_REJOINT') {
-				emitEvent({ message: data.error || 'Impossible de rejoindre', type: 'error' })
+			if (!data.success && !JOIN_SILENT_ERRORS.includes(data.error)) {
+				emitEvent({ message: JOIN_ERROR_MESSAGES[data.error] || data.error || 'Impossible de rejoindre', type: 'error' })
 			}
 		} catch {
 			/* silent */
@@ -666,11 +695,27 @@ export function useGame() {
 		try {
 			const res = await apiFetch(`/api/game/${gameCode.value}/restart`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
 			const data = await res.json()
-			if (!data.success) emitEvent({ message: 'Erreur lors du redémarrage', type: 'error' })
-			intentionalLeave = false 
+			if (!data.success) {
+				emitEvent({ message: 'Erreur lors du redémarrage', type: 'error' })
+				return
+			}
+			await startGame()
 		} catch {
 			emitEvent({ message: 'Erreur réseau (restart)', type: 'error' })
+		} finally {
+			intentionalLeave = false
 		}
+	}
+
+	async function quitGame() {
+		intentionalLeave = true
+		if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+		mercureDisconnect()
+		setGameInfo(null)
+		try {
+			await apiFetch(`/api/game/${gameCode.value}/leave`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() } })
+		} catch { /* silent — on navigue quand même */ }
+		await router.push('/')
 	}
 
 	const { connect: mercureConnect, disconnect: mercureDisconnect } = useGameEvents(
@@ -696,6 +741,13 @@ export function useGame() {
 	}
 
 	onMounted(async () => {
+		const { isLoggedIn } = useAuth()
+		if (!isLoggedIn.value) {
+			emitEvent({ message: 'Vous devez vous connecter pour jouer.', type: 'error' })
+			await router.push('/')
+			return
+		}
+
 		gameCode.value = (route.query.code as string) || ''
 
 		myUserId.value = localStorage.getItem('userId')
@@ -750,6 +802,8 @@ export function useGame() {
 		gameCode,
 		gameStatus,
 		players,
+		isSpectator,
+		spectators,
 
 		roundId,
 		roundNumber,
@@ -790,5 +844,6 @@ export function useGame() {
 		submitVote,
 		goToMenu,
 		startNewGame,
+		quitGame,
 	}
 }

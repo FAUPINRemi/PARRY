@@ -14,6 +14,8 @@ const {
 	gameCode,
 	gameStatus,
 	players,
+	isSpectator,
+	spectators,
 
 	roundNumber,
 	roundStatus,
@@ -49,6 +51,7 @@ const {
 	submitVote,
 	goToMenu,
 	startNewGame,
+	quitGame,
 } = useGame()
 </script>
 
@@ -60,12 +63,24 @@ const {
 					:gameStatus="gameStatus"
 					:players="players"
 					:roundNumber="roundNumber"
+					:spectators="spectators"
 				/>
+
+				<button v-if="gameStatus !== 'finished'" class="gButton quitGameButton" @click="quitGame">
+					<Icon name="pixelarticons:close" />
+					Quitter la partie
+				</button>
+
+				<div v-if="isSpectator && gameStatus !== 'waiting'" class="spectatorBanner">
+					<Icon name="pixelarticons:eye" />
+					Mode spectateur — vous rejoindrez la partie en tant que joueur au prochain lancement.
+				</div>
 
 				<template v-if="gameStatus === 'waiting'">
 					<WaitingHub
 						:gameCode="gameCode"
 						:players="players"
+						:spectators="spectators"
 						:myUserId="myUserId"
 						:isCreator="isCreator"
 						:enableProAI="enableProAI"
