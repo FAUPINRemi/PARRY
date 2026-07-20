@@ -1,7 +1,0 @@
----
-alwaysApply: true
----
-
-Only include files explicitly mentioned with @ syntax.
-Do not auto-include related files unless specifically requested.
-Keep context minimal to reduce token usage.

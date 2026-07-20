@@ -20,7 +20,7 @@ class AIOrchestrator
     {
         $question = $this->questionGenerator->generateQuestion($context);
         
-        // MODÉRATION DÉSACTIVÉE pour réduire les appels Gemini
+        // MODÉRATION DÉSACTIVÉE pour réduire les appels Vertex AI
        
         // À réactiver manuellement si besoin via moderateUserContent()
         /*
@@ -39,8 +39,7 @@ class AIOrchestrator
     {
         $response = $this->responseGenerator->generateResponse($question, $context);
         
-        // MODÉRATION DÉSACTIVÉE pour réduire les appels Gemini
-        // Économise ~1 requête par réponse
+        // MODÉRATION DÉSACTIVÉE pour réduire les appels Vertex AI
         /*
         $modResult = $this->moderation->moderateContent($response, 'response');
         
@@ -52,7 +51,7 @@ class AIOrchestrator
         return $response;
     }
     
- 
+    //Vote pour un joueur comme le ferait un humain
     public function voteAsHuman(
         array $playersWithResponses,
         string $question,
@@ -61,7 +60,7 @@ class AIOrchestrator
         return $this->voteAnalyzer->voteAsHuman($playersWithResponses, $question, $otherPlayersVotes);
     }
     
-  
+      //Analyse la manche et met à jour l'historique de la partie
     public function analyzeRound(array $roundData): array
     {
         $analysis = $this->monitoring->analyzeRound($roundData, $this->gameHistory);
@@ -74,19 +73,19 @@ class AIOrchestrator
         return $analysis;
     }
     
-
+    //Calcule les stats globales depuis l'historique
     public function getGameStats(): array
     {
         return $this->monitoring->computeStats($this->gameHistory);
     }
     
-    
+        //Modère un contenu utilisateur (désactivable via moderateContent)
     public function moderateUserContent(string $content, string $type = 'response'): array
     {
         return $this->moderation->moderateContent($content, $type);
     }
     
-
+    //Modère plusieurs contenus en un seul appel IA
     public function moderateBatch(array $contents): array
     {
         $allContent = implode("\n---\n", $contents);

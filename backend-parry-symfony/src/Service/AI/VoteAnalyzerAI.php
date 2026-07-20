@@ -8,7 +8,7 @@ class VoteAnalyzerAI
     private const MAX_TOKENS = 300;
     
     public function __construct(
-        private readonly GeminiClient $geminiClient
+        private readonly VertexAiClient $vertexClient
     ) {}
     
     /**
@@ -23,7 +23,7 @@ class VoteAnalyzerAI
     ): string {
         $prompt = $this->buildPrompt($playersWithResponses, $question, $otherPlayersVotes);
         
-        $responseText = $this->geminiClient->generate(
+        $responseText = $this->vertexClient->generate(
             $prompt,
             self::TEMPERATURE,
             self::MAX_TOKENS

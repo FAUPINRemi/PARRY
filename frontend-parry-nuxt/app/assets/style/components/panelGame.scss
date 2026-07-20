@@ -336,3 +336,136 @@ li.player--me    { color: #fff; }
   color: #999;
   flex: 0 0 20px;
 }
+
+/* --- Sprite animé du joueur --- */
+@keyframes playerSpriteWait {
+  0% { background-position: 0 0; }
+  8.333% { background-position: -192px 0; }
+  16.666% { background-position: -384px 0; }
+  25% { background-position: 0 -192px; }
+  33.333% { background-position: -192px -192px; }
+  41.666% { background-position: -384px -192px; }
+  50% { background-position: 0 -384px; }
+  58.333% { background-position: -192px -384px; }
+  66.666% { background-position: -384px -384px; }
+  75% { background-position: 0 -576px; }
+  83.333% { background-position: -192px -576px; }
+  91.666% { background-position: -384px -576px; }
+}
+
+@keyframes eliminationSpriteDeath {
+  0% { background-position: 0 0; }
+  8.333% { background-position: -192px 0; }
+  16.666% { background-position: -384px 0; }
+  25% { background-position: 0 -192px; }
+  33.333% { background-position: -192px -192px; }
+  41.666% { background-position: -384px -192px; }
+  50% { background-position: 0 -384px; }
+  58.333% { background-position: -192px -384px; }
+  66.666% { background-position: -384px -384px; }
+  75% { background-position: 0 -576px; }
+  83.333% { background-position: -192px -576px; }
+  91.666% { background-position: -384px -576px; }
+  100% { background-position: -384px -576px; }
+}
+
+.playerSprite {
+  width: 192px;
+  height: 192px;
+  background-size: 576px 768px;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: playerSpriteWait 1200ms steps(1) infinite;
+}
+
+/* --- Phase Responses avec sprite --- */
+.phaseResponsesWrapper {
+  position: relative;
+  display: flex;
+  gap: spacing.$s8;
+  align-items: flex-start;
+}
+
+.phaseResponsesContent {
+  flex: 1;
+}
+
+.phaseResponsesSprite {
+  position: absolute;
+  bottom: -12rem;
+  right: 1rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* --- Question Sprite --- */
+.question-sprite-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 5rem;
+}
+
+.questionSprite {
+  width: 192px;
+  height: 192px;
+  background-size: 576px 768px;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: playerSpriteWait 1200ms steps(1) infinite;
+}
+
+/* --- Elimination Sprite --- */
+.elimination-sprite-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.eliminationSprite {
+  width: 192px;
+  height: 192px;
+  background-size: 576px 768px;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: eliminationSpriteDeath 1200ms steps(1) 1 forwards;
+}
+
+/* --- transition entre les phases (effet flicker terminal) --- */
+.phaseSlot {
+  min-width: 0;
+}
+
+.phase-flicker-enter-active,
+.phase-flicker-leave-active {
+  transition: opacity 0.18s linear, filter 0.18s linear;
+}
+
+.phase-flicker-enter-from {
+  opacity: 0;
+  filter: brightness(1.7) blur(1px);
+}
+
+.phase-flicker-leave-to {
+  opacity: 0;
+  filter: brightness(0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phase-flicker-enter-active,
+  .phase-flicker-leave-active {
+    transition: none;
+  }
+}

@@ -2,7 +2,7 @@
 
 namespace App\Controller\Api;
 
-use App\Service\AI\GeminiClient;
+use App\Service\AI\VertexAiClient;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,11 +21,10 @@ class STTController extends AbstractController
         'audio/aac',
     ];
 
-    // ~2 Mo de base64 ≈ 1.5 Mo audio ≈ ~60s à 200 kbps
     private const MAX_AUDIO_BASE64_LENGTH = 2_097_152;
 
     public function __construct(
-        private readonly GeminiClient $geminiClient,
+        private readonly VertexAiClient $vertexClient,
     ) {}
 
     #[Route('', name: 'api_stt', methods: ['POST'])]
@@ -62,7 +61,7 @@ class STTController extends AbstractController
         }
 
         try {
-            $text = $this->geminiClient->transcribe($audio, $mimeType);
+            $text = $this->vertexClient->transcribe($audio, $mimeType);
             return $this->json(['success' => true, 'text' => $text]);
         } catch (\RuntimeException $e) {
             if (str_contains($e->getMessage(), 'Budget')) {

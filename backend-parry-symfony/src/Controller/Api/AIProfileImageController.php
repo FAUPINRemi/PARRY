@@ -65,7 +65,6 @@ class AIProfileImageController extends AbstractController
             return $this->json([
                 'success' => true,
                 'message' => 'Avatar généré',
-                // si tu veux renvoyer direct le data URL :
                 'avatar' => $user->getAvatarDataUrl(),
             ]);
         } catch (\Throwable $e) {

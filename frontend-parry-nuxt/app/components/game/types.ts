@@ -7,11 +7,32 @@ export type RoundStatus =
 	| 'termine'
 	| null
 
+export interface SpriteAssets {
+	response: string
+	question: string
+	elimination: string
+}
+
 export interface Player {
 	id: string
 	nickname: string
+	alias?: string
+	sprites?: SpriteAssets
 	isAlive: boolean
 	isAI: boolean
+}
+
+export interface Spectator {
+	id: string
+	nickname: string
+}
+
+export interface AnimalConfig {
+	alias: string
+	animalName: string
+	sprites: SpriteAssets
+	color?: string
+	description?: string
 }
 
 export interface Answer {

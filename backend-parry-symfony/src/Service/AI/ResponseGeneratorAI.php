@@ -8,14 +8,14 @@ class ResponseGeneratorAI
     private const MAX_TOKENS = 80;
     
     public function __construct(
-        private readonly GeminiClient $geminiClient
+        private readonly VertexAiClient $vertexClient
     ) {}
     
     public function generateResponse(string $question, array $context = []): string
     {
         $prompt = $this->buildPrompt($question, $context);
         
-        return $this->geminiClient->generate(
+        return $this->vertexClient->generate(
             $prompt,
             self::TEMPERATURE,
             self::MAX_TOKENS

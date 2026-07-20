@@ -3,10 +3,15 @@ namespace App\Controller\Api;
 
 use App\Entity\Game;
 use App\Entity\User;
+use App\Entity\GamePlayerAlias;
+use App\Enum\GameStatus;
+use App\Repository\AnimalConfigRepository;
 use App\Repository\GameRepository;
 use App\Repository\RoundRepository;
 use App\Repository\UserRepository;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Service\AI\BudgetGuard;
+use App\Service\AI\VertexAiClient;
 use App\Service\Game\GameService;
 use App\Service\GameRedisService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -24,9 +29,12 @@ class GameController extends AbstractController
         private readonly GameRepository $gameRepository,
         private readonly RoundRepository $roundRepository,
         private readonly UserRepository $userRepository,
+        private readonly AnimalConfigRepository $animalConfigRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly GameRedisService $gameRedisService,
-        private readonly UserPasswordHasherInterface $passwordHasher
+        private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly BudgetGuard $budgetGuard,
+        private readonly VertexAiClient $vertexAiClient
     ) {}
 
     #[Route('/create', name: 'api_game_create', methods: ['POST'])]
@@ -137,7 +145,7 @@ class GameController extends AbstractController
         }
 
         try {
-            $game = $this->gameRepository->findOneBy(['code' => $code]);
+            $game = $this->gameRepository->findOneBy(['code' => strtoupper($code)]);
             if (!$game) {
                 return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
             }
@@ -187,6 +195,14 @@ class GameController extends AbstractController
                 return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
             }
 
+            if (!$this->vertexAiClient->isConfigured()) {
+                return $this->json(['success' => false, 'error' => 'IA_INDISPONIBLE'], 503);
+            }
+
+            if (!$this->budgetGuard->canMakeRequest()) {
+                return $this->json(['success' => false, 'error' => 'IA_BUDGET_ATTEINT'], 429);
+            }
+
             // Trouver ou créer le joueur IA
             $aiUser = $this->userRepository->findOneBy(['email' => 'ai@parry.game']);
             if (!$aiUser) {
@@ -199,12 +215,10 @@ class GameController extends AbstractController
                 $this->entityManager->flush();
             }
 
-            $this->gameService->debutGame($game);
-
             // Ajouter l'IA comme joueur
             $this->gameService->addAIPlayer($game, $aiUser);
 
-            // Ajout du rôle Pro-IA si activé
+            // Fait avant debutGame() pour que "proai" existe déjà quand l'event Mercure est publié
             if ($proAiEnabled) {
                 $identifier = $game->getCode() ?? $game->getId()->toString();
                 $redis = $this->gameRedisService->getRedis();
@@ -220,9 +234,11 @@ class GameController extends AbstractController
 
                 if (!empty($humanIds)) {
                     $proAiId = $humanIds[array_rand($humanIds)];
-                    $redis->set("game:{$identifier}:proai", $proAiId, ['ex' => 86400]);
+                    $redis->setex("game:{$identifier}:proai", 86400, $proAiId);
                 }
             }
+
+            $this->gameService->debutGame($game);
 
             return $this->json(['success' => true, 'message' => 'Partie démarrée'], 200);
         } catch (\RuntimeException $e) {
@@ -231,11 +247,12 @@ class GameController extends AbstractController
     }
 
     #[Route('/{code}/my-role', name: 'api_game_my_role', methods: ['GET'])]
-    public function getMyRole(string $code, Request $request): JsonResponse
+    public function getMyRole(string $code): JsonResponse
     {
-        $userId = $request->query->get('userId');
-        if (!$userId) {
-            return $this->json(['success' => true, 'role' => 'player']);
+        /** @var \App\Entity\User|null $user */
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['success' => false, 'error' => 'NON_AUTHENTIFIE'], 401);
         }
 
         $game = $this->gameRepository->findOneBy(['code' => $code]);
@@ -246,7 +263,7 @@ class GameController extends AbstractController
         $identifier = $game->getCode() ?? $game->getId()->toString();
         $proAiId = $this->gameRedisService->getRedis()->get("game:{$identifier}:proai");
 
-        $role = ($proAiId !== null && $proAiId === $userId) ? 'proai' : 'player';
+        $role = ($proAiId !== null && $proAiId === $user->getId()->toString()) ? 'proai' : 'player';
         return $this->json(['success' => true, 'role' => $role]);
     }
 
@@ -345,6 +362,12 @@ class GameController extends AbstractController
         $currentUser = $this->getUser();
         if ($currentUser) {
             $myUserId = $currentUser->getId()->toString();
+
+            if ($this->gameService->pruneDisconnectedPlayers($game)) {
+                return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
+            }
+            $this->gameService->touchPlayerHeartbeat($game, $myUserId);
+
             $creatorId = $redis->get("game:{$identifier}:creator");
             $isCreator = $creatorId !== null && $creatorId === $myUserId;
         }
@@ -356,13 +379,35 @@ class GameController extends AbstractController
         foreach ($playersRaw as $playerId => $playerJson) {
             $p = json_decode($playerJson, true);
             $isAlive = $p['isAlive'] ?? true;
-            $players[] = [
+            $player = [
                 'id'       => $playerId,
                 'nickname' => $p['nickname'] ?? 'Joueur',
                 'isAlive'  => $isAlive,
                 'isAI'     => (bool)($p['isAI'] ?? false),
             ];
+
+            if (!empty($p['alias'])) {
+                $player['alias'] = $p['alias'];
+            }
+
+            if (!empty($p['sprites'])) {
+                $player['sprites'] = $p['sprites'];
+            }
+
+            $players[] = $player;
         }
+
+        // Spectateurs depuis Redis
+        $spectatorsRaw = $redis->hgetall("game:{$identifier}:spectators") ?: [];
+        $spectators = [];
+        foreach ($spectatorsRaw as $spectatorId => $spectatorJson) {
+            $s = json_decode($spectatorJson, true);
+            $spectators[] = [
+                'id'       => $spectatorId,
+                'nickname' => $s['nickname'] ?? 'Spectateur',
+            ];
+        }
+        $isSpectator = $myUserId !== null && isset($spectatorsRaw[$myUserId]);
 
         // Round depuis Redis
         $roundRaw = $redis->hgetall("game:{$identifier}:round") ?: [];
@@ -416,6 +461,9 @@ class GameController extends AbstractController
         $abandoned = $abandonedBy !== null
             && $game->getStatus()->value === 'in_progress';
 
+        // Le rôle Pro-IA n'est assigné (clé Redis créée) que si l'option était activée au lancement
+        $proAiEnabled = (bool) $redis->exists("game:{$identifier}:proai");
+
         return $this->json([
             'success' => true,
             'game' => [
@@ -427,8 +475,12 @@ class GameController extends AbstractController
                 'myUserId'  => $myUserId,
                 'abandoned' => $abandoned,
                 'abandonedReason' => $abandoned ? $abandonedBy : null,
+                'proAiEnabled' => $redis->exists("game:{$identifier}:proai") > 0,
                 'players'   => $players,
+                'isSpectator' => $isSpectator,
+                'spectators' => $spectators,
                 'round'     => $roundData,
+                'proAiEnabled' => $proAiEnabled,
             ]
         ]);
     }
@@ -493,9 +545,12 @@ class GameController extends AbstractController
         if ($game->getPlayers()->contains($user)) {
             $game->removePlayer($user);
             $this->entityManager->flush();
+            $redis->hdel("game:{$code}:players", [$userId]);
+        } else {
+            // Spectateur : on le retire de la liste des spectateurs
+            $redis->hdel("game:{$code}:spectators", [$userId]);
         }
 
-        $redis->hdel("game:{$code}:players", [$userId]);
         $redis->del(['user:' . $userId . ':activeGame']);
 
         return $this->json(['success' => true, 'removed' => true], 200);
@@ -560,23 +615,169 @@ class GameController extends AbstractController
     public function checkVictory(string $code): JsonResponse {
         try {
             $game = $this->gameRepository->findOneBy(['code' => $code]);
-            
+
             if (!$game) {
                 return $this->json(['success' => false, 'error' => 'PARTIE_INTROUVABLE'], 404);
             }
-            
+
             $winner = $this->gameService->victorireCondition($game);
-            
+
             if ($winner) {
                 $this->gameService->finGame($game, $winner);
-                
+
                 return $this->json(['success' => true, 'gameOver' => true, 'winner' => $winner], 200);
             }
-            
+
             return $this->json(['success' => true, 'gameOver' => false], 200);
-        } 
+        }
         catch (\Exception $e) {
             return $this->json(['success' => false, 'error' => 'ERREUR_SERVEUR'], 500);
+        }
+    }
+
+    #[Route('/animals', name: 'api_animals_list', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/game/animals',
+        summary: 'Get all animal configurations with sprite paths',
+        tags: ['Game']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'List of all animals',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean'),
+                new OA\Property(
+                    property: 'animals',
+                    type: 'array',
+                    items: new OA\Items(
+                        properties: [
+                            new OA\Property(property: 'alias', type: 'string'),
+                            new OA\Property(property: 'animalName', type: 'string'),
+                            new OA\Property(
+                                property: 'sprites',
+                                properties: [
+                                    new OA\Property(property: 'response', type: 'string'),
+                                    new OA\Property(property: 'question', type: 'string'),
+                                    new OA\Property(property: 'elimination', type: 'string'),
+                                ]
+                            ),
+                        ]
+                    )
+                )
+            ]
+        )
+    )]
+    public function getAnimals(): JsonResponse
+    {
+        try {
+            $animals = $this->animalConfigRepository->findAll();
+            $result = [];
+
+            foreach ($animals as $animal) {
+                $result[] = [
+                    'alias' => $animal->getAlias(),
+                    'animalName' => $animal->getAnimalName(),
+                    'sprites' => [
+                        'response' => $animal->getResponseSprite(),
+                        'question' => $animal->getQuestionSprite(),
+                        'elimination' => $animal->getEliminationSprite(),
+                    ],
+                    'color' => $animal->getColor(),
+                    'description' => $animal->getDescription(),
+                ];
+            }
+
+            return $this->json(['success' => true, 'animals' => $result], 200);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'error' => 'ERREUR_SERVEUR'], 500);
+        }
+    }
+
+    #[Route('/test-setup', name: 'api_game_test_setup', methods: ['POST'])]
+    #[OA\Post(path: '/api/game/test-setup', summary: '[DEV] Setup une partie de test avec joueurs et sprites', tags: ['Game'])]
+    public function testSetup(): JsonResponse
+    {
+        if ('dev' !== $_ENV['APP_ENV'] ?? 'prod') {
+            return $this->json(['success' => false, 'error' => 'ENDPOINT_TEST_DESACTIVE'], 403);
+        }
+
+        try {
+            // 1. Créer une partie test
+            $game = new Game();
+            $testCode = substr(strtoupper(uniqid()), 0, 6);
+            $game->setCode($testCode);
+            $game->setStatus(GameStatus::IN_PROGRESS);
+            $game->setIsPrivate(true);
+            $this->entityManager->persist($game);
+            $this->entityManager->flush();
+
+            $gameCode = $game->getCode();
+
+            // 2. Créer 3 joueurs test
+            $testUsers = [];
+            $animals = $this->animalConfigRepository->findAll();
+
+            for ($i = 0; $i < 3; $i++) {
+                $user = new User();
+                $user->setPseudo("TestPlayer$i");
+                $user->setEmail("test$i@test.local");
+                $user->setPassword($this->passwordHasher->hashPassword($user, 'test'));
+                $this->entityManager->persist($user);
+                $testUsers[] = $user;
+            }
+            $this->entityManager->flush();
+
+            // 3. Ajouter les joueurs à la partie avec sprites
+            foreach ($testUsers as $i => $user) {
+                $game->addPlayer($user);
+
+                // Assigner alias aléatoire
+                $animal = $animals[$i % count($animals)];
+                $alias = new GamePlayerAlias();
+                $alias->setGame($game);
+                $alias->setPlayer($user);
+                $alias->setAnimalConfig($animal);
+                $this->entityManager->persist($alias);
+
+                // Ajouter en Redis avec sprites
+                $this->gameRedisService->addPlayer(
+                    $gameCode,
+                    $user->getId()->toString(),
+                    $user->getPseudo(),
+                    false,
+                    $animal->getAlias(),
+                    $animal->getResponseSprite(),
+                    $animal->getQuestionSprite(),
+                    $animal->getEliminationSprite()
+                );
+            }
+            $this->entityManager->flush();
+
+            // 4. Setup une question et mettre en phase réponses
+            $question = "Quelle est ta couleur préférée?";
+            $redis = $this->gameRedisService->getRedis();
+            $redis->hset("game:$gameCode:round", 'status', 'en_attente_reponses');
+            $redis->hset("game:$gameCode:round", 'question', $question);
+            $redis->hset("game:$gameCode:round", 'questionAskedBy', $testUsers[0]->getId()->toString());
+            $redis->hset("game:$gameCode:round", 'roundNumber', 1);
+
+            return $this->json([
+                'success' => true,
+                'gameCode' => $gameCode,
+                'message' => 'Partie de test créée en phase réponses',
+                'players' => array_map(fn($u) => [
+                    'id' => $u->getId()->toString(),
+                    'pseudo' => $u->getPseudo(),
+                    'email' => $u->getEmail(),
+                ], $testUsers),
+            ], 200);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'error' => 'ERREUR_SETUP_TEST',
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 }

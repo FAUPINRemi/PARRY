@@ -10,10 +10,16 @@ interface Player {
 	isAI: boolean
 }
 
+interface Spectator {
+	id: string
+	nickname: string
+}
+
 const props = defineProps<{
 	gameStatus: GameStatus
 	players: Player[]
 	roundNumber: number
+	spectators?: Spectator[]
 }>()
 
 const alivePlayers = computed(() => props.players.filter(p => p.isAlive))
@@ -33,7 +39,12 @@ const deadPlayers = computed(() => props.players.filter(p => !p.isAlive))
 		</span>
 
 		<span class="players-bar--round" v-if="roundNumber > 0">
-			Round  {{ roundNumber }} 
+			Round  {{ roundNumber }}
+		</span>
+
+		<span v-if="spectators && spectators.length" class="players-bar--spectators">
+			<Icon name="pixelarticons:eye" />
+			 {{ spectators.length }}  spectateur{{ spectators.length > 1 ? 's' : '' }}
 		</span>
 	</div>
 </template>

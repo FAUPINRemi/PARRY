@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import EliminationSprite from '@/components/game/EliminationSprite.vue'
+
 interface Player {
 	id: string
 	nickname: string
@@ -9,6 +11,7 @@ interface Player {
 const props = defineProps<{
 	players: Player[]
 	eliminatedPlayerId: string | null
+	eliminationSpriteUrl?: string
 }>()
 
 function eliminatedPlayer() {
@@ -22,7 +25,7 @@ function eliminatedPlayer() {
 
 	<div v-if="eliminatedPlayerId" class="elimination-box">
 		<p class="elimination-box--name">
-			 {{ eliminatedPlayer()?.nickname ?? 'Un joueur' }} 
+			 {{ eliminatedPlayer()?.nickname ?? 'Un joueur' }}
 			a été éliminé !
 		</p>
 
@@ -34,7 +37,11 @@ function eliminatedPlayer() {
 		</p>
 	</div>
 
-	<div v-else class="phase-box">
+	<div v-if="eliminatedPlayerId && eliminationSpriteUrl" class="elimination-sprite-container">
+		<EliminationSprite :sprite-url="eliminationSpriteUrl" />
+	</div>
+
+	<div v-if="!eliminatedPlayerId" class="phase-box">
 		<p>Calcul des votes…</p>
 		<div class="loading-dots"><span></span><span></span><span></span></div>
 	</div>

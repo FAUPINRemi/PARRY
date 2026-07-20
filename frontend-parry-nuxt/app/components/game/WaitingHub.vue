@@ -8,9 +8,15 @@ interface Player {
 	isAI: boolean
 }
 
+interface Spectator {
+	id: string
+	nickname: string
+}
+
 const props = defineProps<{
 	gameCode: string
 	players: Player[]
+	spectators?: Spectator[]
 	myUserId: string | null
 	isCreator: boolean
 	enableProAI: boolean
@@ -62,8 +68,14 @@ async function onMicToggle(e: Event) {
 		<ul class="hub-players--list">
 			<li v-for="p in players" :key="p.id">
 				<Icon name="pixelarticons:user" />
-				 {{ p.nickname }} 
+				 {{ p.nickname }}
 				<span v-if="p.id === myUserId" class="tag-me">(moi)</span>
+			</li>
+			<li v-for="s in spectators" :key="s.id">
+				<Icon name="pixelarticons:eye" />
+				 {{ s.nickname }}
+				<span class="tag-spectator">(spectateur)</span>
+				<span v-if="s.id === myUserId" class="tag-me">(moi)</span>
 			</li>
 		</ul>
 	</div>

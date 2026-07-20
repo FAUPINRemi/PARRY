@@ -5,12 +5,14 @@ import type {
 	GameStatus,
 	RoundStatus,
 	Player,
+	Spectator,
 	Answer,
 	Role,
 	Winner
 } from '@/components/game/types'
 
-import { authHeaders, playerAlias as playerAliasUtil } from '@/components/game/utils'
+import { authHeaders, playerAlias as playerAliasUtil, playerSpriteUrl as playerSpriteUrlUtil } from '@/components/game/utils'
+import { useAuth } from '@/composables/auth/useAuth'
 
 export function useGame() {
 	const { emitEvent, setTerminalAction, onTerminalSubmit } = useTerminal()
@@ -23,6 +25,8 @@ export function useGame() {
 	const gameCode = ref('')
 	const gameStatus = ref<GameStatus>('waiting')
 	const players = ref<Player[]>([])
+	const isSpectator = ref(false)
+	const spectators = ref<Spectator[]>([])
 
 	const roundId = ref<string | null>(null)
 	const roundNumber = ref(0)
@@ -40,6 +44,7 @@ export function useGame() {
 	const eliminatedPlayerId = ref<string | null>(null)
 
 	const winner = ref<Winner>(null)
+	const proAiActive = ref(false)
 
 	const myUserId = ref<string | null>(null)
 	const isCreator = ref(false)
@@ -48,6 +53,9 @@ export function useGame() {
 	const hasAnswered = ref(false)
 	const hasVoted = ref(false)
 	const enableProAI = ref(false)
+	const proAiEnabled = ref(false)
+	const showRoleReveal = ref(false)
+	let roleRevealTimer: ReturnType<typeof setTimeout> | null = null
 
 	const startCountdown = ref(0)
 
@@ -64,7 +72,12 @@ export function useGame() {
 	let aiTriggerTime = 0
 	let aiResponseTriggerRound = ''
 	let aiResponseTriggerTime = 0
+	let aiVoteTriggerRound = ''
+	let aiVoteTriggerTime = 0
 	const AI_RETRY_INTERVAL = 10_000
+
+	let finishRevealTimer: ReturnType<typeof setTimeout> | null = null
+	const FINISH_REVEAL_DELAY = 4000
 
 	const isMyTurnToAsk = computed(() => questionMasterId.value === myUserId.value)
 
@@ -72,6 +85,7 @@ export function useGame() {
 	const deadPlayers = computed(() => players.value.filter((p: Player) => !p.isAlive))
 
 	const amIAlive = computed(() => {
+		if (isSpectator.value) return false
 		if (!myUserId.value) return true
 		const me = players.value.find((p: Player) => p.id === myUserId.value)
 		return me ? me.isAlive : true
@@ -79,6 +93,10 @@ export function useGame() {
 
 	function playerAlias(playerId: string): string {
 		return playerAliasUtil(playerId, players.value, myUserId.value)
+	}
+
+	function playerSpriteUrl(playerId: string, spriteType: 'response' | 'question' | 'elimination'): string | undefined {
+		return playerSpriteUrlUtil(playerId, spriteType, players.value)
 	}
 
 	let pollInterval: ReturnType<typeof setInterval> | null = null
@@ -115,7 +133,6 @@ export function useGame() {
 			const data = await res.json()
 			if (!data.success) return
 
-			// Un joueur a quitté en cours de partie → retour accueil pour tous
 			if (data.game.abandoned === true) {
 				const reason = data.game.abandonedReason
 				await cancelGameAndReturnHome(
@@ -130,17 +147,31 @@ export function useGame() {
 			const prevRoundStatus = roundStatus.value
 			const prevRoundId = roundId.value
 			const prevAnsweredCount = answeredCount.value
+			const prevVotedCount = votedCount.value
 			const prevRevoteCandidates = revoteCandidates.value
+			const prevIsSpectator = isSpectator.value
 
-			gameStatus.value = data.game.status
+			const incomingStatus: GameStatus = data.game.status
 			players.value = data.game.players || []
+			spectators.value = data.game.spectators || []
+			isSpectator.value = data.game.isSpectator === true
+
+			if (isSpectator.value && !prevIsSpectator) {
+				emitEvent({ message: 'Vous rejoignez en tant que spectateur — vous deviendrez joueur au prochain lancement de partie.', type: 'info' })
+			} else if (!isSpectator.value && prevIsSpectator) {
+				emitEvent({ message: 'Vous êtes maintenant un joueur actif !', type: 'success' })
+			}
 
 			if (data.game.isCreator === true) isCreator.value = true
 			if (data.game.myUserId && !myUserId.value) myUserId.value = data.game.myUserId
 
 			if (data.game.winner === 'players') winner.value = 'PLAYERS_WIN'
 			else if (data.game.winner === 'ai') winner.value = 'AI_WINS'
+			else if (data.game.winner === 'pro_ia') winner.value = 'PRO_IA_WINS'
 			else winner.value = null
+
+			proAiEnabled.value = data.game.proAiEnabled === true
+			proAiActive.value = data.game.proAiEnabled === true
 
 			if (data.game.round) {
 				const r = data.game.round
@@ -192,6 +223,19 @@ export function useGame() {
 				roundStatus.value = null
 			}
 
+			// Laisse l'écran d'élimination visible un instant avant de révéler la fin de partie
+			if (incomingStatus === 'finished' && gameStatus.value !== 'finished') {
+				if (!finishRevealTimer) {
+					finishRevealTimer = setTimeout(() => {
+						finishRevealTimer = null
+						gameStatus.value = 'finished'
+						onGameStatusChange('finished')
+					}, FINISH_REVEAL_DELAY)
+				}
+			} else if (incomingStatus !== 'finished') {
+				gameStatus.value = incomingStatus
+			}
+
 			if (isCreator.value && roundStatus.value === 'termine' && roundId.value) {
 				if (!eliminatedPlayerId.value && !eliminationInFlight.value) {
 					runElimination()
@@ -235,6 +279,16 @@ export function useGame() {
 				}
 			}
 
+			if (isCreator.value && roundStatus.value === 'en_attente_votes' && roundId.value) {
+				const now = Date.now()
+				const votedChanged = votedCount.value !== prevVotedCount
+				if (votedChanged || roundId.value !== aiVoteTriggerRound || now - aiVoteTriggerTime > AI_RETRY_INTERVAL) {
+					aiVoteTriggerRound = roundId.value
+					aiVoteTriggerTime = now
+					triggerAI()
+				}
+			}
+
 			if (prevGameStatus !== gameStatus.value) {
 				onGameStatusChange(gameStatus.value)
 			}
@@ -246,10 +300,19 @@ export function useGame() {
 		}
 	}
 
-	function onGameStatusChange(status: GameStatus) {
+	async function onGameStatusChange(status: GameStatus) {
 		if (status === 'in_progress') {
 			emitEvent({ message: 'La partie a commencé !', type: 'success' })
-			fetchMyRole()
+			await fetchMyRole()
+
+			if (proAiEnabled.value) {
+				showRoleReveal.value = true
+				if (roleRevealTimer) clearTimeout(roleRevealTimer)
+				roleRevealTimer = setTimeout(() => {
+					showRoleReveal.value = false
+					roleRevealTimer = null
+				}, 7000)
+			}
 
 			if (isCreator.value && !roundCreating.value) {
 				roundCreating.value = true
@@ -257,10 +320,19 @@ export function useGame() {
 			}
 		} else if (status === 'finished') {
 			setTerminalAction(null)
-			emitEvent({
-				message: winner.value === 'PLAYERS_WIN' ? 'Les joueurs ont gagné !' : "L'IA a gagné !",
-				type: 'success'
-			})
+
+			let message: string
+			if (winner.value === 'PRO_IA_WINS') {
+				message = myRole.value === 'proai'
+					? 'Vous avez été éliminé en premier, exactement comme prévu. Vous gagnez !'
+					: 'Le Pro-IA a été éliminé en premier... et remporte la partie !'
+			} else if (winner.value === 'PLAYERS_WIN') {
+				message = 'Les joueurs ont gagné !'
+			} else {
+				message = "L'IA a gagné !"
+			}
+
+			emitEvent({ message, type: 'success' })
 		}
 	}
 
@@ -339,6 +411,7 @@ export function useGame() {
 		}
 	}
 
+	// Déclenche l'action de l'IA (question/réponse/vote) après un délai
 	async function triggerAI(delayMs = 0) {
 		if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs))
 
@@ -377,6 +450,7 @@ export function useGame() {
 		}
 	}
 
+	// Calcule les votes et élimine le joueur ciblé
 	async function runElimination() {
 		if (!roundId.value) return
 		if (eliminationInFlight.value) return
@@ -434,6 +508,7 @@ export function useGame() {
 		}
 	}
 
+	// Vérifie si les conditions de victoire sont atteintes
 	async function checkVictory(): Promise<boolean> {
 		try {
 			const res = await apiFetch(`/api/game/${gameCode.value}/check-victory`, {
@@ -466,6 +541,13 @@ export function useGame() {
 		return false
 	}
 
+	const START_ERROR_MESSAGES: Record<string, string> = {
+		IA_INDISPONIBLE: "L'IA n'est pas disponible actuellement, impossible de lancer la partie.",
+		IA_BUDGET_ATTEINT: "Le budget mensuel de l'IA est atteint, impossible de lancer la partie.",
+		PAS_D_ALIAS_DISPONIBLE: "Impossible d'attribuer un avatar à l'IA, réessayez ou relancez la partie.",
+		PAS_ASSEZ_DE_JOUEURS: 'Il faut au moins 3 joueurs pour démarrer.',
+	}
+
 	async function startGame() {
 		if (!isCreator.value) return
 
@@ -478,7 +560,7 @@ export function useGame() {
 
 			const data = await res.json()
 			if (!data.success) {
-				emitEvent({ message: data.error || 'Impossible de démarrer', type: 'error' })
+				emitEvent({ message: START_ERROR_MESSAGES[data.error] || data.error || 'Impossible de démarrer', type: 'error' })
 			}
 		} catch {
 			emitEvent({ message: 'Erreur réseau (démarrage)', type: 'error' })
@@ -486,10 +568,8 @@ export function useGame() {
 	}
 
 	async function fetchMyRole() {
-		if (!myUserId.value) return
-
 		try {
-			const res = await apiFetch(`/api/game/${gameCode.value}/my-role?userId=${myUserId.value}`, {
+			const res = await apiFetch(`/api/game/${gameCode.value}/my-role`, {
 				headers: authHeaders()
 			})
 			const data = await res.json()
@@ -549,6 +629,7 @@ export function useGame() {
 		}
 	}
 
+	// Envoie le vote du joueur au backend
 	async function submitVote(targetPlayerId: string) {
 		if (!roundId.value || !myUserId.value || hasVoted.value) return
 
@@ -574,6 +655,14 @@ export function useGame() {
 
 	let unsubTerminal: (() => void) | undefined
 
+	const JOIN_ERROR_MESSAGES: Record<string, string> = {
+		SPECTATEURS_COMPLET: "Trop de spectateurs sont déjà présents sur cette partie, réessayez plus tard.",
+		GAME_FULL: 'Cette partie est complète.',
+		PARTIE_INTROUVABLE: 'Partie introuvable.',
+	}
+
+	const JOIN_SILENT_ERRORS = ['DEJA_REJOINT', 'DEJA_SPECTATEUR']
+
 	async function joinGameIfNeeded() {
 		try {
 			const res = await apiFetch(`/api/game/${gameCode.value}/join`, {
@@ -584,8 +673,8 @@ export function useGame() {
 
 			const data = await res.json()
 
-			if (!data.success && data.error !== 'DEJA_REJOINT') {
-				emitEvent({ message: data.error || 'Impossible de rejoindre', type: 'error' })
+			if (!data.success && !JOIN_SILENT_ERRORS.includes(data.error)) {
+				emitEvent({ message: JOIN_ERROR_MESSAGES[data.error] || data.error || 'Impossible de rejoindre', type: 'error' })
 			}
 		} catch {
 			/* silent */
@@ -608,11 +697,27 @@ export function useGame() {
 		try {
 			const res = await apiFetch(`/api/game/${gameCode.value}/restart`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
 			const data = await res.json()
-			if (!data.success) emitEvent({ message: 'Erreur lors du redémarrage', type: 'error' })
-			intentionalLeave = false 
+			if (!data.success) {
+				emitEvent({ message: 'Erreur lors du redémarrage', type: 'error' })
+				return
+			}
+			await startGame()
 		} catch {
 			emitEvent({ message: 'Erreur réseau (restart)', type: 'error' })
+		} finally {
+			intentionalLeave = false
 		}
+	}
+
+	async function quitGame() {
+		intentionalLeave = true
+		if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+		mercureDisconnect()
+		setGameInfo(null)
+		try {
+			await apiFetch(`/api/game/${gameCode.value}/leave`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() } })
+		} catch { /* silent — on navigue quand même */ }
+		await router.push('/')
 	}
 
 	const { connect: mercureConnect, disconnect: mercureDisconnect } = useGameEvents(
@@ -624,6 +729,7 @@ export function useGame() {
 
 	let intentionalLeave = false
 
+	// Notifie le serveur qu'on quitte la partie (sendBeacon)
 	function sendLeaveBeacon() {
 		if (intentionalLeave || !gameCode.value) return
 		const config = useRuntimeConfig()
@@ -637,6 +743,13 @@ export function useGame() {
 	}
 
 	onMounted(async () => {
+		const { isLoggedIn } = useAuth()
+		if (!isLoggedIn.value) {
+			emitEvent({ message: 'Vous devez vous connecter pour jouer.', type: 'error' })
+			await router.push('/')
+			return
+		}
+
 		gameCode.value = (route.query.code as string) || ''
 
 		myUserId.value = localStorage.getItem('userId')
@@ -673,6 +786,8 @@ export function useGame() {
 
 	onUnmounted(() => {
 		if (pollInterval) clearInterval(pollInterval)
+		if (roleRevealTimer) clearTimeout(roleRevealTimer)
+		if (finishRevealTimer) clearTimeout(finishRevealTimer)
 		if (unsubTerminal) unsubTerminal()
 		mercureDisconnect()
 		if (handleBeforeUnload) {
@@ -689,6 +804,8 @@ export function useGame() {
 		gameCode,
 		gameStatus,
 		players,
+		isSpectator,
+		spectators,
 
 		roundId,
 		roundNumber,
@@ -706,6 +823,7 @@ export function useGame() {
 		eliminatedPlayerId,
 
 		winner,
+		proAiActive,
 
 		myUserId,
 		isCreator,
@@ -714,6 +832,8 @@ export function useGame() {
 		hasAnswered,
 		hasVoted,
 		enableProAI,
+		proAiEnabled,
+		showRoleReveal,
 		startCountdown,
 
 		isMyTurnToAsk,
@@ -721,10 +841,12 @@ export function useGame() {
 		deadPlayers,
 		amIAlive,
 		playerAlias,
+		playerSpriteUrl,
 
 		startGame,
 		submitVote,
 		goToMenu,
 		startNewGame,
+		quitGame,
 	}
 }

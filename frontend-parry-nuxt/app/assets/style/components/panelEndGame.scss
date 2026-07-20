@@ -11,6 +11,8 @@
 
 	&--win  { --accent: #4caf50; }
 	&--lose { --accent: #f44336; }
+	&--proai-win  { --accent: #ff9800; }
+	&--proai-lose { --accent: #ff9800; }
 }
 
 .endGame-ascii {
@@ -21,7 +23,8 @@
 	overflow-x: auto;
 	margin: 0;
 
-	&--win { color: #4caf50; }
+	&--win   { color: #4caf50; }
+	&--proai { color: #ff9800; }
 }
 
 .endGame-body {
@@ -32,8 +35,9 @@
 	padding-left: 0.8rem;
 	font-size: 0.95rem;
 
-	&--lose { border-color: #f44336; }
-	&--win  { border-color: #4caf50; }
+	&--lose  { border-color: #f44336; }
+	&--win   { border-color: #4caf50; }
+	&--proai { border-color: #ff9800; }
 }
 
 .endGame-proai {
@@ -63,6 +67,8 @@
 	overflow-x: auto;
 	margin: 0;
 	color: #f44336;
+
+	&--proai { color: #ff9800; }
 }
 
 .endGame-actions {

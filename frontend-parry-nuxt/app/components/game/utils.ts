@@ -1,12 +1,5 @@
 import type { Player } from '@/components/game/types'
 
-export const ALIASES = [
-	'Renard', 'Loup', 'Corbeau', 'Serpent', 'Tigre',
-	'Faucon', 'Ours', 'Vipère', 'Lynx', 'Puma',
-	'Aigle', 'Requin', 'Panthère', 'Scorpion', 'Coyote',
-	'Hibou', 'Jaguar', 'Raton', 'Baleine', 'Vautour'
-] as const
-
 export function playerAlias(
 	playerId: string,
 	players: Player[],
@@ -14,12 +7,29 @@ export function playerAlias(
 ): string {
 	if (!playerId) return '???'
 
-	const visibleIds = players
-		.map(p => p.id)
-		.sort()
+	const player = players.find(p => p.id === playerId)
+	if (!player) return '???'
 
-	const idx = visibleIds.indexOf(playerId)
-	return idx >= 0 ? (ALIASES[idx % ALIASES.length] ?? '???') : '???'
+	return player.alias || '???'
+}
+
+const FALLBACK_SPRITES: Record<'response' | 'question' | 'elimination', string> = {
+	response: '/images/sprites/response/wait_corbeau.png',
+	question: '/images/sprites/questions/question_corbeau.png',
+	elimination: '/images/sprites/eliminations/dead_corbeau.png',
+}
+
+export function playerSpriteUrl(
+	playerId: string,
+	spriteType: 'response' | 'question' | 'elimination',
+	players: Player[]
+): string | undefined {
+	if (!playerId) return undefined
+
+	const player = players.find(p => p.id === playerId)
+	if (!player) return undefined
+
+	return player.sprites?.[spriteType] || FALLBACK_SPRITES[spriteType]
 }
 
 export function jwt() {

@@ -28,16 +28,38 @@ class GameRedisService
         $this->redis->expire("game:{$gameCode}", 86400);
     }
     
-    public function addPlayer(string $gameCode, string $playerId, string $nickname, bool $isAI = false): void
-    {
+    public function addPlayer(
+        string $gameCode,
+        string $playerId,
+        string $nickname,
+        bool $isAI = false,
+        ?string $alias = null,
+        ?string $responseSprite = null,
+        ?string $questionSprite = null,
+        ?string $eliminationSprite = null
+    ): void {
+        $playerData = [
+            'nickname' => $nickname,
+            'isAlive' => true,
+            'isAI' => $isAI,
+        ];
+
+        if ($alias) {
+            $playerData['alias'] = $alias;
+        }
+
+        if ($responseSprite || $questionSprite || $eliminationSprite) {
+            $playerData['sprites'] = [
+                'response' => $responseSprite,
+                'question' => $questionSprite,
+                'elimination' => $eliminationSprite,
+            ];
+        }
+
         $this->redis->hset(
             "game:{$gameCode}:players",
             $playerId,
-            json_encode([
-                'nickname' => $nickname,
-                'isAlive' => true,
-                'isAI' => $isAI
-            ])
+            json_encode($playerData)
         );
     }
     

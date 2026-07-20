@@ -4,39 +4,43 @@ namespace App\Service\AI;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
-class GeminiClient
+class VertexAiClient
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly LoggerInterface $logger,
-        private readonly string $apiUrl,
-        private readonly string $apiKey,
+        private readonly string $projectId,
+        private readonly string $location,
         private readonly string $model,
-        private readonly ?BudgetGuard $budgetGuard = null 
+        private readonly string $apiKey,
+        private readonly ?BudgetGuard $budgetGuard = null
     ) {}
 
+    // Vérifie que les identifiants Vertex AI sont bien configurés (sans appel réseau)
+    public function isConfigured(): bool
+    {
+        return $this->projectId !== '' && $this->apiKey !== '';
+    }
+
+    // Appel texte à Vertex AI, bloqué si le budget mensuel est dépassé
     public function generate(
         string $prompt,
         float $temperature = 0.7,
         int $maxTokens = 1024
     ): string {
-        
-        // Log de surveillance immédiat
-        $this->logger->warning('[GEMINI_API_OUT] Requête réelle envoyée à Google AI Studio.');
+
+        $this->logger->warning('[VERTEX_API_OUT] Requête réelle envoyée à Vertex AI.');
 
         if ($this->budgetGuard && !$this->budgetGuard->canMakeRequest()) {
-            $this->logger->error('[GEMINI_API_OUT] Requête annulée : BudgetGuard a bloqué l\'appel.');
+            $this->logger->error('[VERTEX_API_OUT] Requête annulée : BudgetGuard a bloqué l\'appel.');
             throw new \RuntimeException('Budget mensuel atteint.');
         }
 
         try {
-            $url = rtrim($this->apiUrl, '/') . '/' . $this->model . ':generateContent?key=' . $this->apiKey;
-
-            $response = $this->httpClient->request('POST', $url, [
+            $response = $this->httpClient->request('POST', $this->buildUrl(), [
                 'json' => [
-                    'contents' => [['parts' => [['text' => $prompt]]]],
+                    'contents' => [['role' => 'user', 'parts' => [['text' => $prompt]]]],
                     'generationConfig' => [
                         'temperature' => $temperature,
                         'maxOutputTokens' => $maxTokens,
@@ -45,37 +49,37 @@ class GeminiClient
                 'headers' => ['Content-Type' => 'application/json'],
                 'timeout' => 20,
             ]);
-            
+
             $data = $response->toArray();
             $result = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
-            
+
             if ($this->budgetGuard) {
                 $this->budgetGuard->trackRequest($this->estimateCost($prompt, $result));
             }
-            
+
             return $result;
-            
+
         } catch (\Exception $e) {
-            $this->logger->critical('[GEMINI_API_OUT] Erreur lors de l\'appel : ' . $e->getMessage());
+            $this->logger->critical('[VERTEX_API_OUT] Erreur lors de l\'appel : ' . $e->getMessage());
             throw $e;
         }
     }
 
+    // Transcrit un audio en texte via Vertex AI (STT)
     public function transcribe(string $audioBase64, string $mimeType = 'audio/webm'): string
     {
-        $this->logger->warning('[GEMINI_API_OUT] Transcription audio envoyée à Google AI Studio.');
+        $this->logger->warning('[VERTEX_API_OUT] Transcription audio envoyée à Vertex AI.');
 
         if ($this->budgetGuard && !$this->budgetGuard->canMakeRequest()) {
-            $this->logger->error('[GEMINI_API_OUT] Transcription annulée : BudgetGuard a bloqué l\'appel.');
+            $this->logger->error('[VERTEX_API_OUT] Transcription annulée : BudgetGuard a bloqué l\'appel.');
             throw new \RuntimeException('Budget mensuel atteint.');
         }
 
         try {
-            $url = rtrim($this->apiUrl, '/') . '/' . $this->model . ':generateContent?key=' . $this->apiKey;
-
-            $response = $this->httpClient->request('POST', $url, [
+            $response = $this->httpClient->request('POST', $this->buildUrl(), [
                 'json' => [
                     'contents' => [[
+                        'role' => 'user',
                         'parts' => [
                             [
                                 'inline_data' => [
@@ -103,9 +107,21 @@ class GeminiClient
             return trim($result);
 
         } catch (\Exception $e) {
-            $this->logger->critical('[GEMINI_API_OUT] Erreur transcription : ' . $e->getMessage());
+            $this->logger->critical('[VERTEX_API_OUT] Erreur transcription : ' . $e->getMessage());
             throw $e;
         }
+    }
+
+    private function buildUrl(): string
+    {
+        return sprintf(
+            'https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent?key=%s',
+            $this->location,
+            $this->projectId,
+            $this->location,
+            $this->model,
+            $this->apiKey
+        );
     }
 
     private function estimateCost(string $prompt, string $response): float
@@ -117,7 +133,6 @@ class GeminiClient
 
     private function estimateAudioCost(string $audioBase64, string $textOutput): float
     {
-        // ~0.75 bytes decoded, ~200 bytes/s audio WebM, 32 tokens/s, $0.30/1M tokens audio input
         $durationSeconds = (strlen($audioBase64) * 0.75) / 200;
         $audioTokens     = $durationSeconds * 32;
         $outputTokens    = strlen($textOutput) / 4;

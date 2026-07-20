@@ -1,0 +1,25 @@
+// TEST_GAME - Styles pour PhaseResponses avec sprite animé
+@use "../util/spacing";
+
+.phaseResponsesWrapper {
+  display: flex;
+  gap: spacing.$s8;
+  align-items: flex-start;
+}
+
+.phaseResponsesContent {
+  flex: 1;
+}
+
+.phaseResponsesSprite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #333;
+  border-radius: 2px;
+  padding: spacing.$s2;
+  flex-shrink: 0;
+}
