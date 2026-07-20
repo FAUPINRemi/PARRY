@@ -1,3 +1,5 @@
+import type { Ref } from 'vue'
+
 export type MusicTrack = 'menu' | 'ambient' | 'role' | 'victory' | 'defeat'
 
 const MUSIC_FILES: Record<MusicTrack, string> = {
@@ -50,11 +52,22 @@ function writePersisted(key: string, value: unknown) {
 	try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* stockage indisponible */ }
 }
 
-const musicVolume = useState<number>('audio:musicVolume', () => readPersisted('parry:musicVolume', 0.6))
-const sfxVolume = useState<number>('audio:sfxVolume', () => readPersisted('parry:sfxVolume', 0.8))
-const muted = useState<boolean>('audio:muted', () => readPersisted('parry:muted', false))
-const unlocked = useState<boolean>('audio:unlocked', () => false)
-const currentTrack = useState<MusicTrack | null>('audio:currentTrack', () => null)
+let musicVolume: Ref<number>
+let sfxVolume: Ref<number>
+let muted: Ref<boolean>
+let unlocked: Ref<boolean>
+let currentTrack: Ref<MusicTrack | null>
+
+// `useState` doit être appelé depuis un contexte Nuxt valide (setup/plugin),
+// jamais à l'évaluation du module : on l'initialise donc au premier appel de useGameAudio().
+function ensureState() {
+	if (musicVolume) return
+	musicVolume = useState<number>('audio:musicVolume', () => readPersisted('parry:musicVolume', 0.6))
+	sfxVolume = useState<number>('audio:sfxVolume', () => readPersisted('parry:sfxVolume', 0.8))
+	muted = useState<boolean>('audio:muted', () => readPersisted('parry:muted', false))
+	unlocked = useState<boolean>('audio:unlocked', () => false)
+	currentTrack = useState<MusicTrack | null>('audio:currentTrack', () => null)
+}
 
 function applyGains() {
 	if (!musicGain || !sfxGain) return
@@ -268,6 +281,7 @@ function setMuted(v: boolean) {
 }
 
 export function useGameAudio() {
+	ensureState()
 	return {
 		unlocked,
 		muted,
