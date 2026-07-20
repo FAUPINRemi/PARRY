@@ -1,0 +1,51 @@
+@use "../util/colors";
+@use "../util/spacing";
+@use "../util/font-sizes";
+
+.audioGateOverlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	background-color: hsla(0, 0%, 0%, 0.7);
+}
+
+.audioGate {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: spacing.$s6;
+
+	max-width: 420px;
+	margin: spacing.$s6;
+	padding: spacing.$s8;
+	text-align: center;
+
+	background-color: colors.$bg-main;
+	border: 1px solid colors.$accent-main;
+	border-radius: spacing.$s3;
+}
+
+.audioGate-icon {
+	font-size: 2.2rem;
+}
+
+.audioGate-title {
+	font-size: font-sizes.$f1;
+}
+
+.audioGate-text {
+	color: colors.$shade-070;
+	font-size: 0.9rem;
+}
+
+.audioGate-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: spacing.$s5;
+}

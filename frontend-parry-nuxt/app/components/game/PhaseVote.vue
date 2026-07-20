@@ -26,6 +26,13 @@ const votableAnswers = computed(() => {
 	if (!props.revoteCandidates) return props.answers
 	return props.answers.filter(a => props.revoteCandidates!.includes(a.playerId))
 })
+
+const { playClick } = useGameAudio()
+
+function onVote(targetPlayerId: string) {
+	playClick()
+	emit('vote', targetPlayerId)
+}
 </script>
 
 <template>
@@ -66,7 +73,7 @@ const votableAnswers = computed(() => {
 				<button
 					v-if="amIAlive && !hasVoted && ans.playerId !== myUserId"
 					class="gButton important vote-card__btn"
-					@click="emit('vote', ans.playerId)"
+					@click="onVote(ans.playerId)"
 				>
 					Voter
 				</button>

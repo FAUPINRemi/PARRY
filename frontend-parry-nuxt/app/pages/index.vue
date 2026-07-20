@@ -8,6 +8,14 @@ const { apiFetch } = useApi()
 const { isLoggedIn } = useAuth()
 const router = useRouter()
 
+const { unlocked, currentTrack, playMusic } = useGameAudio()
+
+watch(unlocked, (isUnlocked) => {
+	if (isUnlocked && currentTrack.value !== 'menu') {
+		playMusic('menu', { loop: true, loopDip: true })
+	}
+}, { immediate: true })
+
 onMounted(async () => {
 	try {
 		const res = await apiFetch('/api/game/active')

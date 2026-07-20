@@ -24,6 +24,7 @@ onMounted(() => initFromStorage())
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
+  <AudioUnlockGate />
 </template>
 
 <style lang="scss">

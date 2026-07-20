@@ -44,6 +44,7 @@ export function useGame() {
 	const eliminatedPlayerId = ref<string | null>(null)
 
 	const winner = ref<Winner>(null)
+	const proAiActive = ref(false)
 
 	const myUserId = ref<string | null>(null)
 	const isCreator = ref(false)
@@ -170,6 +171,7 @@ export function useGame() {
 			else winner.value = null
 
 			proAiEnabled.value = data.game.proAiEnabled === true
+			proAiActive.value = data.game.proAiEnabled === true
 
 			if (data.game.round) {
 				const r = data.game.round
@@ -821,6 +823,7 @@ export function useGame() {
 		eliminatedPlayerId,
 
 		winner,
+		proAiActive,
 
 		myUserId,
 		isCreator,
