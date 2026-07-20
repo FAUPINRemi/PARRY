@@ -63,66 +63,86 @@ useGameMusic({ gameStatus, roundStatus, eliminatedPlayerId, winner, proAiActive 
 					:roundNumber="roundNumber"
 				/>
 
-				<template v-if="gameStatus === 'waiting'">
-					<WaitingHub
-						:gameCode="gameCode"
-						:players="players"
-						:myUserId="myUserId"
-						:isCreator="isCreator"
-						:enableProAI="enableProAI"
-						@update:enableProAI="enableProAI = $event"
-						@startGame="startGame"
-					/>
-				</template>
+				<Transition name="phase-flicker" mode="out-in">
+					<div v-if="gameStatus === 'waiting'" key="waiting" class="phaseSlot">
+						<WaitingHub
+							:gameCode="gameCode"
+							:players="players"
+							:myUserId="myUserId"
+							:isCreator="isCreator"
+							:enableProAI="enableProAI"
+							@update:enableProAI="enableProAI = $event"
+							@startGame="startGame"
+						/>
+					</div>
 
-				<template v-else-if="gameStatus === 'in_progress'">
-					<PhaseQuestion
-						v-if="roundStatus === 'en_attente_question'"
-						:roundNumber="roundNumber"
-						:isMyTurnToAsk="isMyTurnToAsk"
-						:questionMasterId="questionMasterId"
-						:playerAlias="playerAlias"
-					/>
+					<div
+						v-else-if="gameStatus === 'in_progress' && roundStatus === 'en_attente_question'"
+						key="question"
+						class="phaseSlot"
+					>
+						<PhaseQuestion
+							:roundNumber="roundNumber"
+							:isMyTurnToAsk="isMyTurnToAsk"
+							:questionMasterId="questionMasterId"
+							:playerAlias="playerAlias"
+						/>
+					</div>
 
-					<PhaseResponses
-						v-else-if="roundStatus === 'en_attente_reponses'"
-						:roundNumber="roundNumber"
-						:question="question"
-						:hasAnswered="hasAnswered"
-						:answeredCount="answeredCount"
-						:totalAlive="totalAlive"
-					/>
+					<div
+						v-else-if="gameStatus === 'in_progress' && roundStatus === 'en_attente_reponses'"
+						key="responses"
+						class="phaseSlot"
+					>
+						<PhaseResponses
+							:roundNumber="roundNumber"
+							:question="question"
+							:hasAnswered="hasAnswered"
+							:answeredCount="answeredCount"
+							:totalAlive="totalAlive"
+						/>
+					</div>
 
-					<PhaseVote
-						v-else-if="roundStatus === 'en_attente_votes'"
-						:roundNumber="roundNumber"
-						:question="question"
-						:answers="answers"
-						:revoteCandidates="revoteCandidates"
-						:hasVoted="hasVoted"
-						:amIAlive="amIAlive"
-						:myUserId="myUserId"
-						:votedCount="votedCount"
-						:totalAlive="totalAlive"
-						@vote="submitVote"
-					/>
+					<div
+						v-else-if="gameStatus === 'in_progress' && roundStatus === 'en_attente_votes'"
+						key="vote"
+						class="phaseSlot"
+					>
+						<PhaseVote
+							:roundNumber="roundNumber"
+							:question="question"
+							:answers="answers"
+							:revoteCandidates="revoteCandidates"
+							:hasVoted="hasVoted"
+							:amIAlive="amIAlive"
+							:myUserId="myUserId"
+							:votedCount="votedCount"
+							:totalAlive="totalAlive"
+							@vote="submitVote"
+						/>
+					</div>
 
-					<PhaseElimination
-						v-else-if="roundStatus === 'termine'"
-						:players="players"
-						:eliminatedPlayerId="eliminatedPlayerId"
-					/>
-				</template>
+					<div
+						v-else-if="gameStatus === 'in_progress' && roundStatus === 'termine'"
+						key="elimination"
+						class="phaseSlot"
+					>
+						<PhaseElimination
+							:players="players"
+							:eliminatedPlayerId="eliminatedPlayerId"
+						/>
+					</div>
 
-				<template v-else-if="gameStatus === 'finished'">
-					<EndGame
-						:winner="winner"
-						:myRole="myRole"
-						:isCreator="isCreator"
-						:startNewGame="startNewGame"
-						:goToMenu="goToMenu"
-					/>
-				</template>
+					<div v-else-if="gameStatus === 'finished'" key="finished" class="phaseSlot">
+						<EndGame
+							:winner="winner"
+							:myRole="myRole"
+							:isCreator="isCreator"
+							:startNewGame="startNewGame"
+							:goToMenu="goToMenu"
+						/>
+					</div>
+				</Transition>
 			</div>
 		</div>
 	</div>

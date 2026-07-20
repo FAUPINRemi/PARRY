@@ -336,3 +336,30 @@ li.player--me    { color: #fff; }
   color: #999;
   flex: 0 0 20px;
 }
+
+/* --- transition entre les phases (effet flicker terminal) --- */
+.phaseSlot {
+  min-width: 0;
+}
+
+.phase-flicker-enter-active,
+.phase-flicker-leave-active {
+  transition: opacity 0.18s linear, filter 0.18s linear;
+}
+
+.phase-flicker-enter-from {
+  opacity: 0;
+  filter: brightness(1.7) blur(1px);
+}
+
+.phase-flicker-leave-to {
+  opacity: 0;
+  filter: brightness(0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phase-flicker-enter-active,
+  .phase-flicker-leave-active {
+    transition: none;
+  }
+}
