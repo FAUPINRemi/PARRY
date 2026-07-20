@@ -333,6 +333,13 @@ export function useGame() {
 			}
 
 			emitEvent({ message, type: 'success' })
+		} else if (status === 'waiting') {
+			myRole.value = 'player'
+			showRoleReveal.value = false
+			if (roleRevealTimer) {
+				clearTimeout(roleRevealTimer)
+				roleRevealTimer = null
+			}
 		}
 	}
 
@@ -577,6 +584,8 @@ export function useGame() {
 			if (data.success && data.role === 'proai') {
 				myRole.value = 'proai'
 				emitEvent({ message: "Vous etes le Pro-IA ! Aidez l'IA a survivre.", type: 'info' })
+			} else {
+				myRole.value = 'player'
 			}
 		} catch {
 		}
