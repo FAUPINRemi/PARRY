@@ -9,14 +9,24 @@ const showLogin = ref(true)
 const emailOrPseudo = ref('')
 const email = ref('')
 const pseudo = ref('')
-const password = ref('')
+const loginPassword = ref('')
+const registerPassword = ref('')
 
 async function onLogin() {
-	await login({ username: emailOrPseudo.value, password: password.value })
+	await login({ username: emailOrPseudo.value, password: loginPassword.value })
 }
 
 async function onRegister() {
-	await register({ email: email.value, password: password.value, pseudo: pseudo.value })
+	await register({ email: email.value, password: registerPassword.value, pseudo: pseudo.value })
+	if (success.value) {
+		emailOrPseudo.value = pseudo.value
+		showLogin.value = true
+	}
+}
+
+function switchToLogin() {
+	emailOrPseudo.value = pseudo.value || emailOrPseudo.value
+	showLogin.value = true
 }
 </script>
 
@@ -32,7 +42,7 @@ async function onRegister() {
 
 			<div class="profil-field">
 				<label>Mot de passe :</label>
-				<input v-model="password" type="password" placeholder="Votre mot de passe" required />
+				<input v-model="loginPassword" type="password" placeholder="Votre mot de passe" required />
 			</div>
 
 			<button class="gButton important profil-btn" :disabled="loading">
@@ -61,7 +71,7 @@ async function onRegister() {
 
 			<div class="profil-field">
 				<label>Mot de passe :</label>
-				<input v-model="password" type="password" placeholder="Votre mot de passe" required />
+				<input v-model="registerPassword" type="password" placeholder="Votre mot de passe" required />
 			</div>
 
 			<button class="gButton important profil-btn" :disabled="loading">
@@ -72,7 +82,7 @@ async function onRegister() {
 			<div v-if="success" class="profil-success">Inscription réussie !</div>
 			<div v-if="error" class="profil-error">{{ error }}</div>
 
-			<button type="button" class="gButton profil-switch" @click="showLogin = true">
+			<button type="button" class="gButton profil-switch" @click="switchToLogin">
 				<Icon name="pixelarticons:login" />
 				Se connecter
 			</button>
