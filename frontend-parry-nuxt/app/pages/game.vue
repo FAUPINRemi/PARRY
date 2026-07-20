@@ -8,6 +8,7 @@ import PhaseElimination from '@/components/game/PhaseElimination.vue'
 import EndGame from '@/components/game/EndGame.vue'
 
 import { useGame } from '@/composables/game/useGame'
+import { useGameMusic } from '@/composables/game/useGameMusic'
 
 const {
 	gameCode,
@@ -29,6 +30,7 @@ const {
 	eliminatedPlayerId,
 
 	winner,
+	proAiActive,
 
 	myUserId,
 	isCreator,
@@ -47,6 +49,8 @@ const {
 	goToMenu,
 	startNewGame,
 } = useGame()
+
+useGameMusic({ gameStatus, roundStatus, eliminatedPlayerId, winner, proAiActive })
 </script>
 
 <template>

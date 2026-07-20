@@ -416,6 +416,9 @@ class GameController extends AbstractController
         $abandoned = $abandonedBy !== null
             && $game->getStatus()->value === 'in_progress';
 
+        // Le rôle Pro-IA n'est assigné (clé Redis créée) que si l'option était activée au lancement
+        $proAiEnabled = (bool) $redis->exists("game:{$identifier}:proai");
+
         return $this->json([
             'success' => true,
             'game' => [
@@ -429,6 +432,7 @@ class GameController extends AbstractController
                 'abandonedReason' => $abandoned ? $abandonedBy : null,
                 'players'   => $players,
                 'round'     => $roundData,
+                'proAiEnabled' => $proAiEnabled,
             ]
         ]);
     }

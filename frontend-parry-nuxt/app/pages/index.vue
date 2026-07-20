@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const { emitEvent } = useTerminal()
 const { apiFetch } = useApi()
 const router = useRouter()
+
+const { unlocked, currentTrack, playMusic } = useGameAudio()
+
+watch(unlocked, (isUnlocked) => {
+	if (isUnlocked && currentTrack.value !== 'menu') {
+		playMusic('menu', { loop: true, loopDip: true })
+	}
+}, { immediate: true })
 
 onMounted(async () => {
 	try {

@@ -40,6 +40,7 @@ export function useGame() {
 	const eliminatedPlayerId = ref<string | null>(null)
 
 	const winner = ref<Winner>(null)
+	const proAiActive = ref(false)
 
 	const myUserId = ref<string | null>(null)
 	const isCreator = ref(false)
@@ -141,6 +142,8 @@ export function useGame() {
 			if (data.game.winner === 'players') winner.value = 'PLAYERS_WIN'
 			else if (data.game.winner === 'ai') winner.value = 'AI_WINS'
 			else winner.value = null
+
+			proAiActive.value = data.game.proAiEnabled === true
 
 			if (data.game.round) {
 				const r = data.game.round
@@ -706,6 +709,7 @@ export function useGame() {
 		eliminatedPlayerId,
 
 		winner,
+		proAiActive,
 
 		myUserId,
 		isCreator,

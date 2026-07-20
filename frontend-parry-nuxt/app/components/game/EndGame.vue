@@ -99,6 +99,21 @@ onMounted(() => {
 onUnmounted(() => {
 	if (timer) clearInterval(timer)
 })
+
+const { playClick, playMusic } = useGameAudio()
+
+function onGoToMenu() {
+	playClick()
+	// coupure nette + relance immédiate : si on quitte vite, la musique de fin ne doit pas traîner
+	playMusic('menu', { fadeMs: 0, loop: true, loopDip: true })
+	props.goToMenu()
+}
+
+function onStartNewGame() {
+	playClick()
+	playMusic('menu', { fadeMs: 0, loop: true, loopDip: true })
+	props.startNewGame()
+}
 </script>
 
 <template>
@@ -129,11 +144,11 @@ onUnmounted(() => {
 		</template>
 
 		<div class="endGame-actions">
-			<button class="gButton" @click="goToMenu">
+			<button class="gButton" @click="onGoToMenu">
 				<Icon name="pixelarticons:arrow-left" />
 				Retour au menu
 			</button>
-			<button v-if="isCreator" class="gButton important" @click="startNewGame">
+			<button v-if="isCreator" class="gButton important" @click="onStartNewGame">
 				<Icon name="pixelarticons:reload" />
 				Relancer une partie
 			</button>

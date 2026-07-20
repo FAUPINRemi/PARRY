@@ -12,6 +12,23 @@ function aliasForPanel(playerId: string, players: Player[], myUserId: string | n
 
 const statusLabel = (status: string) =>
 	status === 'waiting' ? 'Attente' : status === 'in_progress' ? 'En cours' : 'Terminée'
+
+const { playClick, muted, musicVolume, setMuted, setMusicVolume, setSfxVolume } = useGameAudio()
+
+function onLogout() {
+	playClick()
+	logout()
+}
+
+function onToggleMuted(e: Event) {
+	setMuted((e.target as HTMLInputElement).checked)
+}
+
+function onVolumeInput(e: Event) {
+	const value = Number((e.target as HTMLInputElement).value)
+	setMusicVolume(value)
+	setSfxVolume(value)
+}
 </script>
 
 <template>
@@ -27,7 +44,25 @@ const statusLabel = (status: string) =>
 			<p class="profil-connected-email">{{ connectedPseudo }}</p>
 		</div>
 
-		<button class="gButton important profil-btn" @click="logout">
+		<div class="profil-audio">
+			<label class="audio-toggle">
+				<input type="checkbox" :checked="muted" @change="onToggleMuted" />
+				<Icon :name="muted ? 'pixelarticons:volume-x' : 'pixelarticons:volume'" />
+				Couper le son
+			</label>
+			<input
+				v-if="!muted"
+				class="audio-volume"
+				type="range"
+				min="0"
+				max="1"
+				step="0.05"
+				:value="musicVolume"
+				@input="onVolumeInput"
+			/>
+		</div>
+
+		<button class="gButton important profil-btn" @click="onLogout">
 			<Icon name="pixelarticons:logout" />
 			Se déconnecter
 		</button>
