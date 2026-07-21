@@ -8,7 +8,7 @@ import PhaseVote from '@/components/game/PhaseVote.vue'
 import PhaseElimination from '@/components/game/PhaseElimination.vue'
 import EndGame from '@/components/game/EndGame.vue'
 
-import { useGame } from '@/composables/game/useGame'
+import { useGame, ROLE_REVEAL_DURATION_MS } from '@/composables/game/useGame'
 import { useGameMusic } from '@/composables/game/useGameMusic'
 
 const {
@@ -99,7 +99,7 @@ useGameMusic({ gameStatus, roundStatus, eliminatedPlayerId, winner, proAiActive 
 						key="roleReveal"
 						class="phaseSlot"
 					>
-						<RoleReveal :myRole="myRole" />
+						<RoleReveal :myRole="myRole" :durationMs="ROLE_REVEAL_DURATION_MS" />
 					</div>
 
 					<div

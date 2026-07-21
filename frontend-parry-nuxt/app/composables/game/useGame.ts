@@ -14,6 +14,10 @@ import type {
 import { authHeaders, playerAlias as playerAliasUtil, playerSpriteUrl as playerSpriteUrlUtil } from '@/components/game/utils'
 import { useAuth } from '@/composables/auth/useAuth'
 
+// Partagé avec RoleReveal.vue pour que sa barre de temps corresponde exactement
+// à la durée réelle d'affichage.
+export const ROLE_REVEAL_DURATION_MS = 7000
+
 export function useGame() {
 	const { emitEvent, setTerminalAction, onTerminalSubmit } = useTerminal()
 	const { apiFetch, apiBase } = useApi()
@@ -322,7 +326,7 @@ export function useGame() {
 				roleRevealTimer = setTimeout(() => {
 					showRoleReveal.value = false
 					roleRevealTimer = null
-				}, 7000)
+				}, ROLE_REVEAL_DURATION_MS)
 			}
 
 			if (isCreator.value && !roundCreating.value) {
