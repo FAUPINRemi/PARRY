@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import PlayersBar from '@/components/game/PlayersBar.vue'
 import WaitingHub from '@/components/game/WaitingHub.vue'
+import RoleReveal from '@/components/game/RoleReveal.vue'
 import PhaseQuestion from '@/components/game/PhaseQuestion.vue'
 import PhaseResponses from '@/components/game/PhaseResponses.vue'
 import PhaseVote from '@/components/game/PhaseVote.vue'
@@ -40,7 +41,7 @@ function playerAlias(id: string) {
 const phase = computed(() => (route.query.phase as string) || 'waiting')
 
 const phases = [
-	'waiting', 'question', 'responses', 'vote', 'elimination',
+	'waiting', 'role-player', 'role-proai', 'question', 'responses', 'vote', 'elimination',
 	'finished-win', 'finished-lose', 'finished-proai-win', 'finished-proai-lose',
 ]
 </script>
@@ -62,6 +63,18 @@ const phases = [
 					myUserId="p1"
 					:isCreator="true"
 					:enableProAI="false"
+				/>
+
+				<RoleReveal
+					v-else-if="phase === 'role-player'"
+					myRole="player"
+					:durationMs="7000"
+				/>
+
+				<RoleReveal
+					v-else-if="phase === 'role-proai'"
+					myRole="proai"
+					:durationMs="7000"
 				/>
 
 				<PhaseQuestion
