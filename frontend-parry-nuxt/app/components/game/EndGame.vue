@@ -37,7 +37,7 @@ function spawnConfetti() {
 	const palette = iAmTheWinningProAi.value ? CONFETTI_COLORS_PROAI : CONFETTI_COLORS
 	confetti.value = Array.from({ length: 28 }, () => ({
 		left: Math.random() * 100,
-		color: palette[Math.floor(Math.random() * palette.length)],
+		color: palette[Math.floor(Math.random() * palette.length)]!,
 		delay: Math.random() * 0.5,
 		duration: 1.6 + Math.random() * 1.2,
 		drift: (Math.random() - 0.5) * 70,
@@ -49,12 +49,28 @@ function spawnConfetti() {
 // (texte normal, pas d'ASCII à largeur fixe) pour rester lisible sans
 // scroll horizontal sur mobile ; l'impact vient du tremblement d'écran /
 // de la vignette rouge autour, pas de la largeur du texte.
-const LOSE_PHRASES = ['Ah.', 'Ah.', 'Ah.', 'Je gagne toujours.']
-// Le Pro-IA a réussi son coup : les autres joueurs l'ont éliminé en premier en
-// le prenant pour l'IA — même traitement visuel que la défaite classique,
-// juste un message et un accent différents (orange).
-const PROAI_LOSE_PHRASES = ['Merci.', 'Merci.', 'Merci.', 'Vous avez éliminé la mauvaise personne.', 'Le Pro-IA gagne.']
-const losePhrases = computed(() => isProAiWin.value ? PROAI_LOSE_PHRASES : LOSE_PHRASES)
+interface LosePhrase { text: string; speaker: 'ai' | 'proai' }
+
+const LOSE_SEQUENCE: LosePhrase[] = [
+	{ text: 'Ah.', speaker: 'ai' },
+	{ text: 'Ah.', speaker: 'ai' },
+	{ text: 'Ah.', speaker: 'ai' },
+	{ text: 'Je gagne toujours.', speaker: 'ai' },
+]
+
+// Le Pro-IA a réussi son coup : deux voix se répondent dans le reveal (l'IA
+// qui nargue d'abord, puis le Pro-IA qui révèle la manipulation) — d'où le
+// mélange rouge/orange partout (vignette, choc, glitch) au lieu d'un accent
+// unique, et un glitch plein écran plus intense que la défaite classique.
+const PROAI_LOSE_SEQUENCE: LosePhrase[] = [
+	{ text: 'Ah.', speaker: 'ai' },
+	{ text: 'Ah.', speaker: 'ai' },
+	{ text: 'Je vous ai bien eu.', speaker: 'proai' },
+	{ text: 'Vous avez éliminé la mauvaise personne.', speaker: 'proai' },
+]
+
+const loseSequence = computed(() => isProAiWin.value ? PROAI_LOSE_SEQUENCE : LOSE_SEQUENCE)
+const currentSpeaker = ref<'ai' | 'proai'>('ai')
 
 const SCRAMBLE_MS = 260
 const PHRASE_HOLD_MS = 700
@@ -70,8 +86,10 @@ const timers: Array<ReturnType<typeof setTimeout>> = []
 // Une fois l'écran de défaite stabilisé (après les phrases), le texte se
 // remet à glitcher de temps en temps, à intervalles aléatoires — comme les
 // carrés rouges, pour la même ambiance chaotique, mais pas pendant le reveal.
+// Le cas Pro-IA glitche environ deux fois plus souvent (ambiance plus intense).
 function scheduleTextGlitch() {
-	const delay = 1000 + Math.random() * 2400
+	const [minDelay, range] = isProAiWin.value ? [500, 1500] : [1000, 2400]
+	const delay = minDelay + Math.random() * range
 	timers.push(setTimeout(() => {
 		textGlitching.value = true
 		timers.push(setTimeout(() => {
@@ -87,20 +105,26 @@ interface GlitchPixel {
 	size: number
 	delay: number
 	duration: number
+	variant: 'red' | 'orange'
 }
 
 // Carrés qui clignotent au hasard un peu partout sur l'écran, en boucle
 // continue (délais négatifs = chaque pièce démarre en plein milieu de son
-// propre cycle, donc elles ne clignotent jamais toutes ensemble).
+// propre cycle, donc elles ne clignotent jamais toutes ensemble). Le cas
+// Pro-IA en met davantage, plus grands, plus rapides, et mélange rouge/orange
+// (les deux "voix" qui se sont liguées) pour un glitch plein écran plus violent.
 const glitchPixels = ref<GlitchPixel[]>([])
 
 function spawnGlitchPixels() {
-	glitchPixels.value = Array.from({ length: 16 }, () => ({
+	const intense = isProAiWin.value
+	const count = intense ? 30 : 16
+	glitchPixels.value = Array.from({ length: count }, () => ({
 		left: Math.random() * 100,
 		top: Math.random() * 100,
-		size: 3 + Math.random() * 7,
-		delay: -(Math.random() * 4),
-		duration: 1.6 + Math.random() * 2.2,
+		size: (intense ? 4 : 3) + Math.random() * (intense ? 9 : 7),
+		delay: -(Math.random() * (intense ? 3 : 4)),
+		duration: intense ? (0.9 + Math.random() * 1.4) : (1.6 + Math.random() * 2.2),
+		variant: intense && Math.random() < 0.5 ? 'orange' : 'red',
 	}))
 }
 
@@ -131,16 +155,18 @@ function scrambleReveal(text: string, onDone: () => void) {
 }
 
 function playLoseSequence(index: number) {
-	const phrases = losePhrases.value
-	if (index >= phrases.length) {
+	const sequence = loseSequence.value
+	if (index >= sequence.length) {
 		shaking.value = false
 		bodyRevealed.value = true
 		scheduleTextGlitch()
 		return
 	}
 
+	const phrase = sequence[index]!
+	currentSpeaker.value = phrase.speaker
 	shaking.value = true
-	scrambleReveal(phrases[index], () => {
+	scrambleReveal(phrase.text, () => {
 		timers.push(setTimeout(() => playLoseSequence(index + 1), PHRASE_HOLD_MS))
 	})
 }
@@ -186,7 +212,7 @@ function onStartNewGame() {
 				v-for="(p, i) in glitchPixels"
 				:key="i"
 				class="endGame-glitchPixels-piece"
-				:class="{ 'endGame-glitchPixels-piece--proai': isProAiWin }"
+				:class="{ 'endGame-glitchPixels-piece--proai': p.variant === 'orange', 'endGame-glitchPixels-piece--intense': isProAiWin }"
 				:style="{
 					left: p.left + '%',
 					top: p.top + '%',
@@ -240,7 +266,7 @@ function onStartNewGame() {
 				:class="{ 'endGame-shock--active': shaking, 'endGame-shock--proai': isProAiWin }"
 			>
 				<div class="endGame-vignette" :class="{ 'endGame-vignette--proai': isProAiWin }"></div>
-				<p class="endGame-phrase" :class="{ 'is-glitching': textGlitching, 'endGame-phrase--proai': isProAiWin }">{{ glitchDisplay }}</p>
+				<p class="endGame-phrase" :class="{ 'is-glitching': textGlitching, 'endGame-phrase--speaker-proai': isProAiWin && currentSpeaker === 'proai' }">{{ glitchDisplay }}</p>
 			</div>
 
 			<div
