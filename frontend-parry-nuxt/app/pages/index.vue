@@ -121,8 +121,6 @@ o888o        o88o     o8888o o888o  o888o o888o  o888o     o888o
 					</form>
 				</div>
 			</div>
-
-			<div class="rightCol"></div>
 		</div>
 	</div>
 </template>

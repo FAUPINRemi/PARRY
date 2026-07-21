@@ -14,90 +14,135 @@ const props = defineProps<{
 
 const isPlayersWin = computed(() => props.winner === 'PLAYERS_WIN')
 
-const ASCII_WIN = `
-  _   _ ___ ____ _____ ___  ___ ___ _  _____   _
- | | | |_  _/ ___|_   _/ _ \\|_ _|| _ \\| ____| | |
- | | | ||  | |     | || | | | | | | |_) |  _|   | |
- | |_| ||  | |___  | || |_| | | | |  _ <| |___  |_|
- \\___/|___\\____| |_|\\___/ |___||_| \_\_____| (_)`
+interface ConfettiPiece {
+	left: number
+	color: string
+	delay: number
+	duration: number
+	drift: number
+	rotate: number
+}
 
-const AI_MESSAGE = `
-  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _
+const CONFETTI_COLORS = ['#4caf50', '#8bc34a', '#ffffff', '#ffd54f', '#4dd0e1']
 
-        Ah.           Ah.           Ah.
+const confetti = ref<ConfettiPiece[]>([])
 
-  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _
+function spawnConfetti() {
+	confetti.value = Array.from({ length: 28 }, () => ({
+		left: Math.random() * 100,
+		color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+		delay: Math.random() * 0.5,
+		duration: 1.6 + Math.random() * 1.2,
+		drift: (Math.random() - 0.5) * 70,
+		rotate: 320 + Math.random() * 360,
+	}))
+}
 
-
-   J  e     g  a  g  n  e     t  o  u  j  o  u  r  s  .
-
-
-   J  e     g  a  g  n  e     t  o  u  j  o  u  r  s  .
-
-
-   J  e     g  a  g  n  e     t  o  u  j  o  u  r  s  .
-
-
-  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _`
-
+// Écran de défaite : quelques phrases courtes qui se glitchent une à une
+// (texte normal, pas d'ASCII à largeur fixe) pour rester lisible sans
+// scroll horizontal sur mobile ; l'impact vient du tremblement d'écran /
+// de la vignette rouge autour, pas de la largeur du texte.
+const LOSE_PHRASES = ['Ah.', 'Ah.', 'Ah.', 'Je gagne toujours.']
+const SCRAMBLE_MS = 260
+const PHRASE_HOLD_MS = 700
+const UPDATE_INTERVAL = 35
 const GLITCH_CHARS = 'abcdefghijklmnopqrstuvwxyz@#$%&?!|/\\-_+*^~<>[]{}01░▒▓'
-const REVEAL_DURATION = 13000
-const UPDATE_INTERVAL = 80
 
 const glitchDisplay = ref('')
-let timer: ReturnType<typeof setInterval> | null = null
+const shaking = ref(false)
+const bodyRevealed = ref(false)
+const textGlitching = ref(false)
+const timers: Array<ReturnType<typeof setTimeout>> = []
+
+// Une fois l'écran de défaite stabilisé (après les 4 phrases), le texte se
+// remet à glitcher de temps en temps, à intervalles aléatoires — comme les
+// carrés rouges, pour la même ambiance chaotique, mais pas pendant le reveal.
+function scheduleTextGlitch() {
+	const delay = 1000 + Math.random() * 2400
+	timers.push(setTimeout(() => {
+		textGlitching.value = true
+		timers.push(setTimeout(() => {
+			textGlitching.value = false
+		}, 160 + Math.random() * 160))
+		scheduleTextGlitch()
+	}, delay))
+}
+
+interface GlitchPixel {
+	left: number
+	top: number
+	size: number
+	delay: number
+	duration: number
+}
+
+// Carrés rouges qui clignotent au hasard un peu partout sur l'écran, en
+// boucle continue (délais négatifs = chaque pièce démarre en plein milieu
+// de son propre cycle, donc elles ne clignotent jamais toutes ensemble).
+const glitchPixels = ref<GlitchPixel[]>([])
+
+function spawnGlitchPixels() {
+	glitchPixels.value = Array.from({ length: 16 }, () => ({
+		left: Math.random() * 100,
+		top: Math.random() * 100,
+		size: 3 + Math.random() * 7,
+		delay: -(Math.random() * 4),
+		duration: 1.6 + Math.random() * 2.2,
+	}))
+}
 
 function randomChar() {
 	return GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]
 }
 
-function startGlitchReveal(target: string) {
-	const chars = target.split('')
-	const revealable = chars
-		.map((c, i) => (c !== '\n' && c !== ' ') ? i : -1)
-		.filter(i => i >= 0)
-		.sort(() => Math.random() - 0.5)
-
-	const revealed = new Set<number>()
-	const totalTicks = REVEAL_DURATION / UPDATE_INTERVAL
-
+function scrambleReveal(text: string, onDone: () => void) {
+	const chars = text.split('')
+	const totalTicks = Math.max(1, Math.round(SCRAMBLE_MS / UPDATE_INTERVAL))
 	let tick = 0
 
-	glitchDisplay.value = chars
-		.map(c => (c === '\n' || c === ' ') ? c : randomChar())
-		.join('')
-
-	timer = setInterval(() => {
+	const interval = setInterval(() => {
 		tick++
-		const progress = tick / totalTicks
-		const targetRevealed = Math.floor(progress * revealable.length)
-
-		while (revealed.size < targetRevealed && revealable.length > revealed.size) {
-			revealed.add(revealable[revealed.size])
-		}
-
-		glitchDisplay.value = chars.map((c, i) => {
-			if (c === '\n' || c === ' ') return c
-			if (revealed.has(i)) return c
-			return Math.random() > 0.4 ? randomChar() : (glitchDisplay.value[i] ?? randomChar())
-		}).join('')
+		const revealFrom = Math.floor((tick / totalTicks) * chars.length)
+		glitchDisplay.value = chars
+			.map((c, i) => (c === ' ' || i < revealFrom) ? c : randomChar())
+			.join('')
 
 		if (tick >= totalTicks) {
-			glitchDisplay.value = target
-			clearInterval(timer!)
-			timer = null
+			clearInterval(interval)
+			glitchDisplay.value = text
+			onDone()
 		}
 	}, UPDATE_INTERVAL)
+
+	timers.push(interval)
+}
+
+function playLoseSequence(index: number) {
+	if (index >= LOSE_PHRASES.length) {
+		shaking.value = false
+		bodyRevealed.value = true
+		scheduleTextGlitch()
+		return
+	}
+
+	shaking.value = true
+	scrambleReveal(LOSE_PHRASES[index], () => {
+		timers.push(setTimeout(() => playLoseSequence(index + 1), PHRASE_HOLD_MS))
+	})
 }
 
 onMounted(() => {
-	if (!isPlayersWin.value) {
-		startGlitchReveal(AI_MESSAGE)
+	if (isPlayersWin.value) {
+		bodyRevealed.value = true
+		spawnConfetti()
+	} else {
+		playLoseSequence(0)
+		spawnGlitchPixels()
 	}
 })
 
 onUnmounted(() => {
-	if (timer) clearInterval(timer)
+	timers.forEach(t => clearTimeout(t))
 })
 
 const { playClick, playMusic } = useGameAudio()
@@ -119,8 +164,42 @@ function onStartNewGame() {
 <template>
 	<div class="endGame" :class="isPlayersWin ? 'endGame--win' : 'endGame--lose'">
 
+		<div v-if="!isPlayersWin" class="endGame-glitchPixels" aria-hidden="true">
+			<span
+				v-for="(p, i) in glitchPixels"
+				:key="i"
+				class="endGame-glitchPixels-piece"
+				:style="{
+					left: p.left + '%',
+					top: p.top + '%',
+					width: p.size + 'px',
+					height: p.size + 'px',
+					animationDelay: p.delay + 's',
+					animationDuration: p.duration + 's',
+				}"
+			></span>
+		</div>
+
 		<template v-if="isPlayersWin">
-			<pre class="endGame-ascii endGame-ascii--win">{{ ASCII_WIN }}</pre>
+			<div class="endGame-winStage">
+				<div class="endGame-flash"></div>
+				<h2 class="endGame-title endGame-title--win">VICTOIRE</h2>
+				<div class="endGame-confetti">
+					<span
+						v-for="(c, i) in confetti"
+						:key="i"
+						class="endGame-confetti-piece"
+						:style="{
+							left: c.left + '%',
+							backgroundColor: c.color,
+							animationDelay: c.delay + 's',
+							animationDuration: c.duration + 's',
+							'--drift': c.drift + 'px',
+							'--rotate': c.rotate + 'deg',
+						}"
+					></span>
+				</div>
+			</div>
 			<div class="endGame-body endGame-body--win">
 				<p>Les joueurs ont eliminé l'IA.</p>
 				<p v-if="myRole === 'proai'" class="endGame-proai">
@@ -130,16 +209,19 @@ function onStartNewGame() {
 		</template>
 
 		<template v-else>
-			<div class="endGame-lose-layout">
-				<div class="endGame-lose-left">
-					<pre class="endGame-glitch">{{ glitchDisplay }}</pre>
-					<div class="endGame-body endGame-body--lose">
-						<p>L'IA a survécu jusqu'à la fin.</p>
-						<p v-if="myRole === 'proai'" class="endGame-proai">
-							[ ROLE : PRO-IA — vous aidiez secretement l'IA ]
-						</p>
-					</div>
-				</div>
+			<div class="endGame-shock" :class="{ 'endGame-shock--active': shaking }">
+				<div class="endGame-vignette"></div>
+				<p class="endGame-phrase" :class="{ 'is-glitching': textGlitching }">{{ glitchDisplay }}</p>
+			</div>
+
+			<div
+				class="endGame-body endGame-body--lose"
+				:class="{ 'is-revealed': bodyRevealed, 'is-glitching': textGlitching }"
+			>
+				<p>L'IA a survécu jusqu'à la fin.</p>
+				<p v-if="myRole === 'proai'" class="endGame-proai">
+					[ ROLE : PRO-IA — vous aidiez secretement l'IA ]
+				</p>
 			</div>
 		</template>
 
