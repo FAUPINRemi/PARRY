@@ -165,8 +165,28 @@ class AIJoueurService
             ];
         }
 
+        $revoteData = $this->gameRedisService->getRedis()->get("game:{$gameIdentifier}:round:revote");
+        $revoteCandidats = $revoteData ? json_decode($revoteData, true) : null;
+
+        if ($revoteCandidats !== null) {
+            // Ne montrer à l'IA que les joueurs éligibles au revote (+ sa propre réponse pour le contexte du prompt)
+            $playersWithResponses = array_values(array_filter(
+                $playersWithResponses,
+                fn($p) => $p['is_ai'] || in_array($p['player_id'], $revoteCandidats, true)
+            ));
+        }
+
         $question = $round->getQuestion();
         $votedFor = $this->aiOrchestrator->voteAsHuman($playersWithResponses, $question);
+
+        if ($revoteCandidats !== null && !in_array($votedFor, $revoteCandidats, true)) {
+            // Filet de sécurité si le LLM ignore la consigne : forcer un choix valide parmi les candidats du revote
+            $choixValides = array_values(array_filter(
+                $revoteCandidats,
+                fn($id) => $id !== $aiUser->getId()->toString()
+            ));
+            $votedFor = $choixValides[array_rand($choixValides)] ?? $revoteCandidats[array_rand($revoteCandidats)];
+        }
 
         $this->roundService->voteRound($round, $aiUser, $votedFor);
     }
