@@ -27,7 +27,7 @@ services:
         lazy: true
         arguments:
             $projectId: '%env(VERTEX_PROJECT_ID)%'
-            $location: '%env(VERTEX_LOCATION)%'
+            $location: '%env(VERTEX_TTS_LOCATION)%'
             $ttsModel: '%env(VERTEX_TTS_MODEL)%'
             $apiKey: '%env(VERTEX_API_KEY)%'
             $budgetGuard: '@App\Service\AI\BudgetGuard'
