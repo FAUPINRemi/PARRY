@@ -178,6 +178,13 @@ useGameMusic({ gameStatus, roundStatus, eliminatedPlayerId, winner, proAiActive 
 	</div>
 </template>
 
-<style scoped lang="scss">
+<style lang="scss">
+// Non-scopé volontairement : PhaseQuestion/PhaseResponses/PhaseVote/
+// PhaseElimination/WaitingHub/PlayersBar n'ont pas leur propre <style> et
+// rendent des classes définies ici (.vote-card, .elimination-box,
+// .question-display, .players-bar--alive...). Un <style scoped> ne les
+// aurait jamais atteintes (le scope ne descend pas dans les enfants), donc
+// tout ce fichier restait mort pour ces classes. Même pattern que
+// panelProfil.scss / panelProfilNotConnected.scss, déjà non-scopés.
 @use "@/assets/style/components/panelGame";
 </style>

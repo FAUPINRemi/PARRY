@@ -101,6 +101,14 @@ export function useGame() {
 
 	let pollInterval: ReturnType<typeof setInterval> | null = null
 
+	// Toute sortie de partie (volontaire ou non) doit repasser la musique en
+	// mode menu — sinon l'ambiance de la partie continue de jouer telle
+	// quelle sur l'accueil (cf. EndGame.vue qui le fait déjà pour le bouton
+	// "Retour au menu" ; ici on couvre les redirections automatiques).
+	function returnToMenuMusic() {
+		useGameAudio().playMusic('menu', { fadeMs: 400, loop: true, loopDip: true })
+	}
+
 	async function cancelGameAndReturnHome(message: string) {
 		if (pollInterval) {
 			clearInterval(pollInterval)
@@ -109,6 +117,7 @@ export function useGame() {
 		mercureDisconnect()
 		emitEvent({ message, type: 'error' })
 		setGameInfo(null)
+		returnToMenuMusic()
 		await new Promise(r => setTimeout(r, 300))
 		await router.push('/')
 	}
@@ -119,12 +128,14 @@ export function useGame() {
 			if (res.status === 401) {
 				if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
 				mercureDisconnect()
+				returnToMenuMusic()
 				await router.push('/')
 				return
 			}
 			if (res.status === 404) {
 				if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
 				mercureDisconnect()
+				returnToMenuMusic()
 				await router.push('/')
 				return
 			}

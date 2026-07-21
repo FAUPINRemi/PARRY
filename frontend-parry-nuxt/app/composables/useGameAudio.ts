@@ -212,6 +212,11 @@ function restoreMusicVolume(voice: Voice | null, ms = 500) {
 	voice.gain.gain.linearRampToValueAtTime(1, t + ms / 1000)
 }
 
+// Le fichier source est mastérisé très bas (quasi inaudible à gain 1.0) :
+// on le booste x7, avec un limiteur pour absorber les pics et éviter que
+// ce boost ne fasse écrêter/distordre le son.
+const ELIMINATION_GAIN_BOOST = 7
+
 /** Tamise la musique en cours, joue le stinger d'élimination, puis remonte le son (sauf si la partie a changé de morceau pendant ce temps). */
 async function playEliminationSequence(): Promise<void> {
 	const ducked = duckMusic(0.18, 300)
@@ -220,9 +225,20 @@ async function playEliminationSequence(): Promise<void> {
 		const ctx = ensureContext()
 		const source = ctx.createBufferSource()
 		source.buffer = buffer
+
 		const gain = ctx.createGain()
+		gain.gain.value = ELIMINATION_GAIN_BOOST
+
+		const limiter = ctx.createDynamicsCompressor()
+		limiter.threshold.value = -6
+		limiter.knee.value = 6
+		limiter.ratio.value = 12
+		limiter.attack.value = 0.003
+		limiter.release.value = 0.15
+
 		source.connect(gain)
-		gain.connect(musicGain!)
+		gain.connect(limiter)
+		limiter.connect(musicGain!)
 		await new Promise<void>(resolve => {
 			source.onended = () => resolve()
 			source.start()

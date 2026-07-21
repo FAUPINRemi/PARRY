@@ -1,0 +1,62 @@
+@use "../util/colors";
+@use "../util/spacing";
+@use "../util/font-sizes";
+
+.authGateOverlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1100;
+
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	// Opaque (pas de transparence) : contrairement à un simple voile, ce gate
+	// bloque vraiment l'accès tant qu'on n'a pas choisi une option, donc rien
+	// de la page en dessous ne doit transparaître (ça créait de fines lignes
+	// fantômes là où les bordures des panels du dessous se superposaient).
+	background-color: colors.$bg-main;
+}
+
+.authGate {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: spacing.$s6;
+
+	width: 100%;
+	max-width: 380px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-sizing: border-box;
+
+	margin: spacing.$s6;
+	padding: spacing.$s8;
+	text-align: center;
+
+	background-color: colors.$bg-main;
+	border: 1px solid colors.$accent-main;
+	border-radius: spacing.$s3;
+}
+
+.authGate-icon {
+	font-size: 2.2rem;
+}
+
+.authGate-title {
+	font-size: font-sizes.$f1;
+}
+
+.authGate-text {
+	color: colors.$shade-070;
+	font-size: 0.9rem;
+}
+
+.authGate-guest {
+	width: 100%;
+	padding-top: spacing.$s5;
+	border-top: 1px solid colors.$shade-020;
+
+	display: flex;
+	justify-content: center;
+}

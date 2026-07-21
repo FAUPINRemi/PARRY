@@ -10,8 +10,12 @@
 	width: 100%;
 	max-width: 1100px;
 	margin: 0 auto;
-	padding: 1.25rem; 
+	padding: 1.25rem;
 	box-sizing: border-box;
+
+	@include respond-to(sm) {
+		min-height: 0;
+	}
 }
 
 .homepageGrid {
@@ -19,13 +23,6 @@
 	gap: 1rem;
 	grid-template-columns: 1fr;
 	align-items: start;
-}
-
-@media (min-width: 1024px) {
-	.homepageGrid {
-		grid-template-columns: 1fr 1fr;
-		align-items: stretch;
-	}
 }
 
 .leftCol {
@@ -37,6 +34,11 @@
 
 	padding-left: 0;
 	padding-top: 0;
+
+	// Nécessaire pour que .asciiPre puisse se dimensionner en unités "cq*"
+	// relatives à CE conteneur plutôt qu'au viewport (voir plus bas : sur
+	// desktop ce panel ne fait qu'une fraction de la largeur de la fenêtre).
+	container-type: inline-size;
 }
 
 .asciiPre {
@@ -51,12 +53,23 @@
 	margin: 0;
 	padding: 0;
 	text-align: left;
-	font-size: clamp(14px, 1.35vw, 22px);
+	max-width: 100%;
+	overflow-x: auto;
+	// En "cqi" (% de la largeur du conteneur .leftCol) et non "vw" : sur
+	// desktop, ce panel ne fait qu'une fraction de la largeur de la fenêtre
+	// (layout 2 colonnes), donc un dimensionnement basé sur le viewport fait
+	// déborder le logo au fur et à mesure que la fenêtre s'agrandit.
+	font-size: clamp(7px, 2.15cqi, 22px);
 	-webkit-font-smoothing: none;
 	text-rendering: optimizeSpeed;
 
 	margin-top: 5rem;
 	margin-bottom: 5rem;
+
+	@include respond-to(sm) {
+		margin-top: 1.5rem;
+		margin-bottom: 1.5rem;
+	}
 }
 
 
@@ -81,6 +94,10 @@
 	gap: 0.6rem;
 	width: 100%;
 	min-height: 44px;
+
+	button {
+		flex-shrink: 0;
+	}
 }
 
 @media (max-width: 520px) {
@@ -101,8 +118,4 @@
 	background: rgba(255, 255, 255, 0.06);
 	color: #fff;
 	box-sizing: border-box;
-}
-
-.rightCol {
-	min-height: 1px;
 }
