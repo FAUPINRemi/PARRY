@@ -10,7 +10,7 @@ class QuestionGeneratorAI
     private const MAX_TOKENS = 100;
 
     public function __construct(
-        private readonly GeminiClient $geminiClient,
+        private readonly VertexAiClient $vertexClient,
         private readonly QuestionCategoryRepository $categoryRepository
     ) {}
 
@@ -18,7 +18,7 @@ class QuestionGeneratorAI
     {
         $prompt = $this->buildPrompt($context);
         
-        return $this->geminiClient->generate(
+        return $this->vertexClient->generate(
             $prompt,
             self::TEMPERATURE,
             self::MAX_TOKENS

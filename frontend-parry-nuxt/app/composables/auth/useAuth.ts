@@ -1,8 +1,10 @@
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 
 export function useAuth() {
 	const { emitEvent } = useTerminal()
 	const { apiFetch } = useApi()
+	const router = useRouter()
 
 	const connectedPseudo = useState<string | null>('auth:pseudo', () => null)
 	const connectedAvatarDataUrl = useState<string | null>('auth:avatar', () => null)
@@ -139,6 +141,7 @@ export function useAuth() {
 					localStorage.removeItem('userAvatarDataUrl')
 				}
 				emitEvent({ message: 'Déconnexion réussie.', type: 'info' })
+				await router.push('/')
 			} else {
 				error.value = 'Erreur logout'
 				emitEvent({ message: error.value, type: 'error' })
@@ -151,6 +154,7 @@ export function useAuth() {
 				localStorage.removeItem('userId')
 				localStorage.removeItem('userAvatarDataUrl')
 			}
+			await router.push('/')
 		} finally {
 			loading.value = false
 		}

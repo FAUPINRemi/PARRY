@@ -13,6 +13,11 @@ const props = defineProps<{
 }>()
 
 const isPlayersWin = computed(() => props.winner === 'PLAYERS_WIN')
+const isProAiWin = computed(() => props.winner === 'PRO_IA_WINS')
+const iAmTheWinningProAi = computed(() => isProAiWin.value && props.myRole === 'proai')
+// "Gagnant" au sens visuel (flash + confettis) : les joueurs qui éliminent l'IA,
+// ou le Pro-IA qui a réussi son coup en se faisant éliminer en premier.
+const isWinLike = computed(() => isPlayersWin.value || iAmTheWinningProAi.value)
 
 interface ConfettiPiece {
 	left: number
@@ -24,13 +29,15 @@ interface ConfettiPiece {
 }
 
 const CONFETTI_COLORS = ['#4caf50', '#8bc34a', '#ffffff', '#ffd54f', '#4dd0e1']
+const CONFETTI_COLORS_PROAI = ['#ff9800', '#ffb74d', '#ffffff', '#ffd54f']
 
 const confetti = ref<ConfettiPiece[]>([])
 
 function spawnConfetti() {
+	const palette = iAmTheWinningProAi.value ? CONFETTI_COLORS_PROAI : CONFETTI_COLORS
 	confetti.value = Array.from({ length: 28 }, () => ({
 		left: Math.random() * 100,
-		color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+		color: palette[Math.floor(Math.random() * palette.length)],
 		delay: Math.random() * 0.5,
 		duration: 1.6 + Math.random() * 1.2,
 		drift: (Math.random() - 0.5) * 70,
@@ -43,6 +50,12 @@ function spawnConfetti() {
 // scroll horizontal sur mobile ; l'impact vient du tremblement d'écran /
 // de la vignette rouge autour, pas de la largeur du texte.
 const LOSE_PHRASES = ['Ah.', 'Ah.', 'Ah.', 'Je gagne toujours.']
+// Le Pro-IA a réussi son coup : les autres joueurs l'ont éliminé en premier en
+// le prenant pour l'IA — même traitement visuel que la défaite classique,
+// juste un message et un accent différents (orange).
+const PROAI_LOSE_PHRASES = ['Merci.', 'Merci.', 'Merci.', 'Vous avez éliminé la mauvaise personne.', 'Le Pro-IA gagne.']
+const losePhrases = computed(() => isProAiWin.value ? PROAI_LOSE_PHRASES : LOSE_PHRASES)
+
 const SCRAMBLE_MS = 260
 const PHRASE_HOLD_MS = 700
 const UPDATE_INTERVAL = 35
@@ -54,7 +67,7 @@ const bodyRevealed = ref(false)
 const textGlitching = ref(false)
 const timers: Array<ReturnType<typeof setTimeout>> = []
 
-// Une fois l'écran de défaite stabilisé (après les 4 phrases), le texte se
+// Une fois l'écran de défaite stabilisé (après les phrases), le texte se
 // remet à glitcher de temps en temps, à intervalles aléatoires — comme les
 // carrés rouges, pour la même ambiance chaotique, mais pas pendant le reveal.
 function scheduleTextGlitch() {
@@ -76,9 +89,9 @@ interface GlitchPixel {
 	duration: number
 }
 
-// Carrés rouges qui clignotent au hasard un peu partout sur l'écran, en
-// boucle continue (délais négatifs = chaque pièce démarre en plein milieu
-// de son propre cycle, donc elles ne clignotent jamais toutes ensemble).
+// Carrés qui clignotent au hasard un peu partout sur l'écran, en boucle
+// continue (délais négatifs = chaque pièce démarre en plein milieu de son
+// propre cycle, donc elles ne clignotent jamais toutes ensemble).
 const glitchPixels = ref<GlitchPixel[]>([])
 
 function spawnGlitchPixels() {
@@ -118,7 +131,8 @@ function scrambleReveal(text: string, onDone: () => void) {
 }
 
 function playLoseSequence(index: number) {
-	if (index >= LOSE_PHRASES.length) {
+	const phrases = losePhrases.value
+	if (index >= phrases.length) {
 		shaking.value = false
 		bodyRevealed.value = true
 		scheduleTextGlitch()
@@ -126,13 +140,13 @@ function playLoseSequence(index: number) {
 	}
 
 	shaking.value = true
-	scrambleReveal(LOSE_PHRASES[index], () => {
+	scrambleReveal(phrases[index], () => {
 		timers.push(setTimeout(() => playLoseSequence(index + 1), PHRASE_HOLD_MS))
 	})
 }
 
 onMounted(() => {
-	if (isPlayersWin.value) {
+	if (isWinLike.value) {
 		bodyRevealed.value = true
 		spawnConfetti()
 	} else {
@@ -162,13 +176,17 @@ function onStartNewGame() {
 </script>
 
 <template>
-	<div class="endGame" :class="isPlayersWin ? 'endGame--win' : 'endGame--lose'">
+	<div
+		class="endGame"
+		:class="isProAiWin ? (iAmTheWinningProAi ? 'endGame--proai-win' : 'endGame--proai-lose') : (isPlayersWin ? 'endGame--win' : 'endGame--lose')"
+	>
 
-		<div v-if="!isPlayersWin" class="endGame-glitchPixels" aria-hidden="true">
+		<div v-if="!isWinLike" class="endGame-glitchPixels" aria-hidden="true">
 			<span
 				v-for="(p, i) in glitchPixels"
 				:key="i"
 				class="endGame-glitchPixels-piece"
+				:class="{ 'endGame-glitchPixels-piece--proai': isProAiWin }"
 				:style="{
 					left: p.left + '%',
 					top: p.top + '%',
@@ -180,10 +198,12 @@ function onStartNewGame() {
 			></span>
 		</div>
 
-		<template v-if="isPlayersWin">
+		<template v-if="isWinLike">
 			<div class="endGame-winStage">
-				<div class="endGame-flash"></div>
-				<h2 class="endGame-title endGame-title--win">VICTOIRE</h2>
+				<div class="endGame-flash" :class="{ 'endGame-flash--proai': iAmTheWinningProAi }"></div>
+				<h2 class="endGame-title" :class="iAmTheWinningProAi ? 'endGame-title--proai' : 'endGame-title--win'">
+					{{ iAmTheWinningProAi ? 'MISSION ACCOMPLIE' : 'VICTOIRE' }}
+				</h2>
 				<div class="endGame-confetti">
 					<span
 						v-for="(c, i) in confetti"
@@ -200,28 +220,42 @@ function onStartNewGame() {
 					></span>
 				</div>
 			</div>
-			<div class="endGame-body endGame-body--win">
-				<p>Les joueurs ont eliminé l'IA.</p>
-				<p v-if="myRole === 'proai'" class="endGame-proai">
-					[ ROLE : PRO-IA — vous aidiez secretement l'IA ]
-				</p>
+			<div class="endGame-body" :class="iAmTheWinningProAi ? ['endGame-body--win', 'endGame-body--proai'] : 'endGame-body--win'">
+				<template v-if="iAmTheWinningProAi">
+					<p>Vous avez été éliminé en premier, exactement comme prévu.</p>
+					<p class="endGame-proai">[ ROLE : PRO-IA — mission accomplie ]</p>
+				</template>
+				<template v-else>
+					<p>Les joueurs ont eliminé l'IA.</p>
+					<p v-if="myRole === 'proai'" class="endGame-proai">
+						[ ROLE : PRO-IA — vous aidiez secretement l'IA ]
+					</p>
+				</template>
 			</div>
 		</template>
 
 		<template v-else>
-			<div class="endGame-shock" :class="{ 'endGame-shock--active': shaking }">
-				<div class="endGame-vignette"></div>
-				<p class="endGame-phrase" :class="{ 'is-glitching': textGlitching }">{{ glitchDisplay }}</p>
+			<div
+				class="endGame-shock"
+				:class="{ 'endGame-shock--active': shaking, 'endGame-shock--proai': isProAiWin }"
+			>
+				<div class="endGame-vignette" :class="{ 'endGame-vignette--proai': isProAiWin }"></div>
+				<p class="endGame-phrase" :class="{ 'is-glitching': textGlitching, 'endGame-phrase--proai': isProAiWin }">{{ glitchDisplay }}</p>
 			</div>
 
 			<div
 				class="endGame-body endGame-body--lose"
-				:class="{ 'is-revealed': bodyRevealed, 'is-glitching': textGlitching }"
+				:class="{ 'is-revealed': bodyRevealed, 'is-glitching': textGlitching, 'endGame-body--proai': isProAiWin }"
 			>
-				<p>L'IA a survécu jusqu'à la fin.</p>
-				<p v-if="myRole === 'proai'" class="endGame-proai">
-					[ ROLE : PRO-IA — vous aidiez secretement l'IA ]
-				</p>
+				<template v-if="isProAiWin">
+					<p>Le Pro-IA s'est fait éliminer en premier et remporte la partie.</p>
+				</template>
+				<template v-else>
+					<p>L'IA a survécu jusqu'à la fin.</p>
+					<p v-if="myRole === 'proai'" class="endGame-proai">
+						[ ROLE : PRO-IA — vous aidiez secretement l'IA ]
+					</p>
+				</template>
 			</div>
 		</template>
 

@@ -126,11 +126,12 @@
     display: flex;
 
     align-items: center;
+    flex-shrink: 0;
 
     height: fit-content;
     width: fit-content;
 
-    padding: spacing.$s2 spacing.$s3;
+    padding: spacing.$s2 spacing.$s5;
     gap: spacing.$s4;
 
     font-size: font-sizes.$f0;
@@ -141,6 +142,7 @@
     border: none;
 
     cursor: pointer;
+    white-space: nowrap;
 
     &::before {
       content: "[";

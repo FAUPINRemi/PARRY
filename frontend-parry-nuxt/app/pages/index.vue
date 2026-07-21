@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuth } from '@/composables/auth/useAuth'
 
 const { emitEvent } = useTerminal()
 const { apiFetch } = useApi()
+const { isLoggedIn } = useAuth()
 const router = useRouter()
 
 const { unlocked, currentTrack, playMusic } = useGameAudio()
@@ -33,7 +35,20 @@ const error = ref<string | null>(null)
 const joinCode = ref('')
 const joinError = ref<string | null>(null)
 
+watch(joinCode, (value) => {
+	const upper = value.toUpperCase()
+	if (upper !== value) joinCode.value = upper
+})
+
+const LOGIN_REQUIRED_MESSAGE = 'Vous devez vous connecter pour jouer.'
+
 async function createGame() {
+	if (!isLoggedIn.value) {
+		error.value = LOGIN_REQUIRED_MESSAGE
+		emitEvent({ message: LOGIN_REQUIRED_MESSAGE, type: 'error' })
+		return
+	}
+
 	loading.value = true
 	error.value = null
 
@@ -66,6 +81,12 @@ async function createGame() {
 }
 
 async function joinGame() {
+	if (!isLoggedIn.value) {
+		joinError.value = LOGIN_REQUIRED_MESSAGE
+		emitEvent({ message: LOGIN_REQUIRED_MESSAGE, type: 'error' })
+		return
+	}
+
 	if (!joinCode.value) return
 	router.push({ path: '/game', query: { code: joinCode.value } })
 }
@@ -85,11 +106,15 @@ ooooooooo.         .o.       ooooooooo.   ooooooooo.   oooooo   oooo
 o888o        o88o     o8888o o888o  o888o o888o  o888o     o888o
 </pre>
 
+				<div v-if="!isLoggedIn" class="loginRequiredNotice" style="color: red; margin-bottom: 1em">
+					Vous devez vous connecter pour jouer.
+				</div>
+
 				<div class="cardsRow">
 					<div class="card">
 						<h2>Créer un salon</h2>
 
-						<button class="gButton important" :disabled="loading" @click.prevent="createGame">
+						<button class="gButton important" :disabled="loading || !isLoggedIn" @click.prevent="createGame">
 							<Icon name="pixelarticons:plus" />
 							 {{loading ? 'Création...' : 'Créer un salon' }}
 						</button>
@@ -110,10 +135,9 @@ o888o        o88o     o8888o o888o  o888o o888o  o888o     o888o
 						<label>Code du salon:</label>
 
 						<div class="joinRow">
-							<input v-model="joinCode" type="text" placeholder="ABC123" required />
-							<button class="gButton important">
-								<Icon name="pixelarticons:search" />
-							Rejoindre
+							<input v-model="joinCode" type="text" placeholder="ABC123" required style="text-transform: uppercase" />
+							<button class="gButton important" :disabled="!isLoggedIn">
+								<Icon name="pixelarticons:search" /> Rejoindre
 							</button>
 						</div>
 

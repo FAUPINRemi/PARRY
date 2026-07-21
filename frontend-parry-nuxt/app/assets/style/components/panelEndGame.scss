@@ -10,12 +10,16 @@
 	padding: 0.5rem 0;
 
 	&--win  { --accent: #4caf50; }
+	&--lose { --accent: #f44336; }
+	&--proai-win  { --accent: #ff9800; }
+	&--proai-lose { --accent: #ff9800; }
 
 	// Bruit/scanlines en boucle tant que l'écran de défaite reste affiché
 	// (pas juste pendant le reveal des phrases) : deux pseudo-éléments en
-	// %/inset, donc identiques quelle que soit la taille de l'écran.
-	&--lose {
-		--accent: #f44336;
+	// %/inset, donc identiques quelle que soit la taille de l'écran. Le
+	// Pro-IA "gagnant" (--proai-lose, pour tous les autres joueurs) reprend
+	// exactement le même traitement.
+	&--lose, &--proai-lose {
 		position: relative;
 
 		&::before {
@@ -65,6 +69,12 @@
 		// s'allume comme une enseigne néon plutôt que d'apparaître d'un coup
 		animation: endgame-title-poweron 0.9s steps(1) forwards;
 	}
+
+	&--proai {
+		color: #ff9800;
+		text-shadow: 0 0 12px rgba(255, 152, 0, 0.7), 0 0 28px rgba(255, 152, 0, 0.4);
+		animation: endgame-title-poweron 0.9s steps(1) forwards;
+	}
 }
 
 .endGame-body {
@@ -94,6 +104,11 @@
 	}
 
 	&--win  { border-color: #4caf50; }
+
+	// Accent orange du Pro-IA, appliqué en plus de --win/--lose (garde le
+	// reveal/glitch de --lose ou l'apparition immédiate de --win, ne change
+	// que la couleur).
+	&--proai { border-color: #ff9800; }
 }
 
 .endGame-proai {
@@ -119,6 +134,11 @@
 	&--active {
 		animation: endgame-shake 0.35s ease-in-out infinite;
 	}
+
+	&--proai {
+		background: #0a0700;
+		border-color: #3a2a0d;
+	}
 }
 
 .endGame-vignette {
@@ -127,6 +147,10 @@
 	pointer-events: none;
 	background: radial-gradient(ellipse at center, transparent 35%, rgba(244, 67, 54, 0.4) 100%);
 	animation: endgame-vignette-pulse 1.5s ease-in-out infinite;
+
+	&--proai {
+		background: radial-gradient(ellipse at center, transparent 35%, rgba(255, 152, 0, 0.4) 100%);
+	}
 }
 
 // Ligne de "tracking" VHS qui traverse la boîte de temps en temps (arrêts
@@ -141,6 +165,10 @@
 	mix-blend-mode: screen;
 	opacity: 0;
 	animation: endgame-tracking-glitch 3.6s ease-in-out infinite;
+}
+
+.endGame-shock--proai::after {
+	background: rgba(255, 152, 0, 0.55);
 }
 
 .endGame-phrase {
@@ -158,6 +186,11 @@
 
 	color: #f44336;
 	text-shadow: 0 0 10px rgba(244, 67, 54, 0.55);
+
+	&--proai {
+		color: #ff9800;
+		text-shadow: 0 0 10px rgba(255, 152, 0, 0.55);
+	}
 
 	// accroc RGB (façon bande VHS) déclenché à intervalles aléatoires par le
 	// JS (scheduleTextGlitch), pas en boucle CSS à cycle fixe.
@@ -235,6 +268,11 @@
 	animation-name: endgame-pixel-glitch;
 	animation-timing-function: steps(1);
 	animation-iteration-count: infinite;
+
+	&--proai {
+		background: #ff9800;
+		box-shadow: 0 0 6px rgba(255, 152, 0, 0.85);
+	}
 }
 
 @keyframes endgame-pixel-glitch {
@@ -270,6 +308,10 @@
 	background: radial-gradient(ellipse at center, rgba(76, 175, 80, 0.55) 0%, transparent 70%);
 	opacity: 0;
 	animation: endgame-win-flash 1.2s ease-out forwards;
+
+	&--proai {
+		background: radial-gradient(ellipse at center, rgba(255, 152, 0, 0.55) 0%, transparent 70%);
+	}
 }
 
 @keyframes endgame-win-flash {
@@ -315,11 +357,14 @@
 		&.is-glitching p { animation: none; }
 	}
 	.endGame--lose::before,
-	.endGame--lose::after {
+	.endGame--lose::after,
+	.endGame--proai-lose::before,
+	.endGame--proai-lose::after {
 		animation: none;
 		opacity: 0.03;
 	}
-	.endGame-title--win {
+	.endGame-title--win,
+	.endGame-title--proai {
 		animation: none;
 		opacity: 1;
 	}

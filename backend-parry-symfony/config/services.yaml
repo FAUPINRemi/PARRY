@@ -11,23 +11,25 @@ services:
             - '../src/Kernel.php'
 
     # --- CONFIGURATION AI SÉCURISÉE ---
-    
+
     # Le client de base : Lazy pour ne pas lire la clé au démarrage
-    App\Service\AI\GeminiClient:
+    App\Service\AI\VertexAiClient:
         lazy: true
         arguments:
-            $apiUrl: '%env(GEMINI_API_URL)%'
-            $apiKey: '%env(GEMINI_API_KEY)%'
-            $model: '%env(GEMINI_MODEL)%'
+            $projectId: '%env(VERTEX_PROJECT_ID)%'
+            $location: '%env(VERTEX_LOCATION)%'
+            $model: '%env(VERTEX_MODEL)%'
+            $apiKey: '%env(VERTEX_API_KEY)%'
             $budgetGuard: '@App\Service\AI\BudgetGuard'
             $logger: '@logger'
 
-    App\Service\AI\GeminiTTSService:
+    App\Service\AI\VertexAiTTSService:
         lazy: true
         arguments:
-            $apiUrl: '%env(GEMINI_API_URL)%'
-            $apiKey: '%env(GEMINI_API_KEY)%'
-            $ttsModel: '%env(GEMINI_TTS_MODEL)%'
+            $projectId: '%env(VERTEX_PROJECT_ID)%'
+            $location: '%env(VERTEX_TTS_LOCATION)%'
+            $ttsModel: '%env(VERTEX_TTS_MODEL)%'
+            $apiKey: '%env(VERTEX_API_KEY)%'
             $budgetGuard: '@App\Service\AI\BudgetGuard'
             $logger: '@logger'
 
