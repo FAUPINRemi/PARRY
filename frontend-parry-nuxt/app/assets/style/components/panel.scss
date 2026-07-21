@@ -74,6 +74,11 @@
     min-height: 0;
     overflow-y: auto;
 
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
     @include respond-to(xs) {
       padding: spacing.$s1 0;
     }
