@@ -40,7 +40,8 @@ function playerAlias(id: string) {
 const phase = computed(() => (route.query.phase as string) || 'waiting')
 
 const phases = [
-	'waiting', 'question', 'responses', 'vote', 'elimination', 'finished-win', 'finished-lose',
+	'waiting', 'question', 'responses', 'vote', 'elimination',
+	'finished-win', 'finished-lose', 'finished-proai-win', 'finished-proai-lose',
 ]
 </script>
 
@@ -111,6 +112,24 @@ const phases = [
 				<EndGame
 					v-else-if="phase === 'finished-lose'"
 					winner="AI_WINS"
+					myRole="player"
+					:isCreator="true"
+					:startNewGame="async () => {}"
+					:goToMenu="async () => {}"
+				/>
+
+				<EndGame
+					v-else-if="phase === 'finished-proai-win'"
+					winner="PRO_IA_WINS"
+					myRole="proai"
+					:isCreator="true"
+					:startNewGame="async () => {}"
+					:goToMenu="async () => {}"
+				/>
+
+				<EndGame
+					v-else-if="phase === 'finished-proai-lose'"
+					winner="PRO_IA_WINS"
 					myRole="player"
 					:isCreator="true"
 					:startNewGame="async () => {}"
