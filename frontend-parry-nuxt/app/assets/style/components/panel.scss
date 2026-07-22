@@ -11,7 +11,17 @@
   display: flex;
   flex-direction: column;
 
+  margin: spacing.$s5;
+  padding: spacing.$s5;
+
+  // Ordre important : ces overrides doivent venir APRÈS la règle de base
+  // ci-dessus pour gagner en cascade CSS (même sélecteur, même spécificité).
+  // `width: auto` est nécessaire ici : une fois `.gRow` empilé en colonne
+  // (mobile), `width: 100%` + `margin` déborde du conteneur flex sur le
+  // cross-axis (le navigateur ne soustrait pas la marge d'un pourcentage
+  // explicite) — `auto` laisse flexbox calculer la bonne taille disponible.
   @include respond-to(sm) {
+    width: auto;
     margin: spacing.$s2;
     padding: spacing.$s2;
   }
@@ -20,10 +30,7 @@
     padding: spacing.$s1;
   }
 
-  margin: spacing.$s5;
-  padding: spacing.$s5;
-
-  border: 1px solid colors.$accent-main;
+  border: 2px solid colors.$accent-main;
 
   border-radius: spacing.$s3;
 
@@ -54,6 +61,9 @@
       @include respond-to(xs) {
         font-size: font-sizes.$f0;
       }
+      @include respond-from(xl) {
+        font-size: font-sizes.$f2;
+      }
     }
   }
 
@@ -63,6 +73,11 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
 
     @include respond-to(xs) {
       padding: spacing.$s1 0;

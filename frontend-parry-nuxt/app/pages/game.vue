@@ -8,7 +8,7 @@ import PhaseVote from '@/components/game/PhaseVote.vue'
 import PhaseElimination from '@/components/game/PhaseElimination.vue'
 import EndGame from '@/components/game/EndGame.vue'
 
-import { useGame } from '@/composables/game/useGame'
+import { useGame, ROLE_REVEAL_DURATION_MS } from '@/composables/game/useGame'
 import { useGameMusic } from '@/composables/game/useGameMusic'
 
 const {
@@ -99,7 +99,7 @@ useGameMusic({ gameStatus, roundStatus, eliminatedPlayerId, winner, proAiActive 
 						key="roleReveal"
 						class="phaseSlot"
 					>
-						<RoleReveal :myRole="myRole" />
+						<RoleReveal :myRole="myRole" :durationMs="ROLE_REVEAL_DURATION_MS" />
 					</div>
 
 					<div
@@ -178,6 +178,13 @@ useGameMusic({ gameStatus, roundStatus, eliminatedPlayerId, winner, proAiActive 
 	</div>
 </template>
 
-<style scoped lang="scss">
+<style lang="scss">
+// Non-scopé volontairement : PhaseQuestion/PhaseResponses/PhaseVote/
+// PhaseElimination/WaitingHub/PlayersBar n'ont pas leur propre <style> et
+// rendent des classes définies ici (.vote-card, .elimination-box,
+// .question-display, .players-bar--alive...). Un <style scoped> ne les
+// aurait jamais atteintes (le scope ne descend pas dans les enfants), donc
+// tout ce fichier restait mort pour ces classes. Même pattern que
+// panelProfil.scss / panelProfilNotConnected.scss, déjà non-scopés.
 @use "@/assets/style/components/panelGame";
 </style>

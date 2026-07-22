@@ -14,14 +14,27 @@ class ResponseGeneratorAI
     public function generateResponse(string $question, array $context = []): string
     {
         $prompt = $this->buildPrompt($question, $context);
-        
-        return $this->vertexClient->generate(
+
+        $response = $this->vertexClient->generate(
             $prompt,
             self::TEMPERATURE,
             self::MAX_TOKENS
         );
+
+        return $this->sanitize($response);
     }
-    
+
+    // Filet de sécurité : le prompt interdit déjà guillemets/emojis, mais le LLM peut dévier
+    private function sanitize(string $text): string
+    {
+        $text = trim($text);
+        $text = preg_replace('/^["“\'](.*)["”\']$/us', '$1', $text) ?? $text;
+        $text = preg_replace('/[\x{1F1E6}-\x{1F1FF}\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{FE0F}\x{200D}]/u', '', $text) ?? $text;
+        $text = preg_replace('/ {2,}/', ' ', $text) ?? $text;
+
+        return trim($text);
+    }
+
     private function buildPrompt(string $question, array $context): string
     {
         $styles = [
@@ -38,17 +51,17 @@ class ResponseGeneratorAI
         $humanResponsesSection = '';
         if (!empty($context['human_responses'])) {
             $responseLines = implode("\n", array_map(
-                fn(string $r) => '- "' . $r . '"',
+                fn(string $r) => '- ' . $r,
                 $context['human_responses']
             ));
             $humanResponsesSection = <<<SECTION
 
 RÉPONSES DES AUTRES JOUEURS (humains)
-Voici ce que les autres joueurs ont répondu. Analyse leur style commun (longueur, registre, abréviations, niveau de fautes) et reproduis ce style dans ta propre réponse. Ne copie PAS le contenu, mais adapte-toi au ton général du groupe :
+Voici ce que les autres joueurs ont répondu (sans guillemets, c'est le texte brut qu'ils ont tapé). Analyse leur style commun (longueur, registre, abréviations, niveau de fautes, présence ou non d'emoji) et reproduis ce style dans ta propre réponse. Ne copie PAS le contenu, mais adapte-toi au ton général du groupe :
 $responseLines
 
-CONSIGNE STYLE
-Adopte le même niveau de familiarité, la même longueur approximative et le même niveau d'abréviations/fautes que ce groupe. Si tout le monde écrit court, écris court. Si tout le monde utilise des abréviations, fais pareil.
+CONSIGNE STYLE (PRIORITAIRE)
+C'est la consigne la plus importante : adopte le même niveau de familiarité, la même longueur approximative et le même niveau d'abréviations/fautes que ce groupe, plutôt que le style de base ci-dessus. Si tout le monde écrit court, écris court. Si tout le monde utilise des abréviations, fais pareil. Si personne n'utilise d'emoji, n'en mets surtout pas.
 SECTION;
         }
 
@@ -67,33 +80,35 @@ CONSIGNES
 - Pas d'emoji
 - Ponctuation minimale (un point ou rien)
 - Pas de virgules multiples ou de points d'exclamation excessifs
+- Ne mets JAMAIS ta réponse entre guillemets, les exemples ci-dessous sont juste une liste à puces
 
-EXEMPLES VARIÉS
+EXEMPLES VARIÉS (le tiret est juste une puce de liste, ne l'inclus pas et ne mets pas de guillemets)
 
-Question: "Quel est ton plat préféré ?"
-- "les pates carbonara"
-- "pizza margherita jcrois"
-- "un bon burger maison avec des frites"
-- "sushis"
-- "tartiflette ca dechire"
+Question: Quel est ton plat préféré ?
+- les pates carbonara
+- pizza margherita jcrois
+- un bon burger maison avec des frites
+- sushis
+- tartiflette ca dechire
 
-Question: "T'aimerais avoir quel super-pouvoir ?"
-- "voler"
-- "me teleporter genre instantané"
-- "lire dans les pensées mais juste un peu"
-- "etre invisible"
-- "controler le temps"
-- "super force jsais pas"
+Question: T'aimerais avoir quel super-pouvoir ?
+- voler
+- me teleporter genre instantané
+- lire dans les pensées mais juste un peu
+- etre invisible
+- controler le temps
+- super force jsais pas
 
-Question: "Quel film tu regarderais en boucle ?"
-- "inception"
-- "le seigneur des anneaux le premier"
-- "retour vers le futur"
-- "matrix jsuis pas sur"
-- "pulp fiction sans hesiter"
+Question: Quel film tu regarderais en boucle ?
+- inception
+- le seigneur des anneaux le premier
+- retour vers le futur
+- matrix jsuis pas sur
+- pulp fiction sans hesiter
 
 À ÉVITER ABSOLUMENT
 - Les emojis
+- Les guillemets autour de la réponse
 - "Moi c'est", "Je dirais", "Perso", "Ouh là"
 - Ponctuation excessive (!!!, ???)
 - Phrases trop construites ou littéraires
@@ -103,7 +118,7 @@ Question: "Quel film tu regarderais en boucle ?"
 QUESTION
 $question
 
-Réponds maintenant de façon naturelle et humaine :
+Réponds maintenant de façon naturelle et humaine, en texte brut sans guillemets autour :
 PROMPT;
     }
 }

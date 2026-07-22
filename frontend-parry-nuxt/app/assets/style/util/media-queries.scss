@@ -18,3 +18,14 @@ $breakpoint-xl: 1536px;
     @media (max-width: #{$breakpoint-xl}) { @content; }
   }
 }
+
+// Variante min-width : overrides pour grands écrans (au-delà du breakpoint).
+@mixin respond-from($breakpoint) {
+  @if $breakpoint == md {
+    @media (min-width: #{$breakpoint-md}) { @content; }
+  } @else if $breakpoint == lg {
+    @media (min-width: #{$breakpoint-lg}) { @content; }
+  } @else if $breakpoint == xl {
+    @media (min-width: #{$breakpoint-xl}) { @content; }
+  }
+}

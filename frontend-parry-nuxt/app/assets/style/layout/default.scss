@@ -1,3 +1,4 @@
+@use "../util/media-queries" as *;
 @use "../util/colors";
 @use "../util/spacing";
 @use "../util/font-sizes";
@@ -70,6 +71,29 @@
       overflow: hidden;
 
       padding: spacing.$s5;
+
+      // Au-delà d'un grand écran, on plafonne et centre plutôt que de
+      // laisser les panels s'étirer sur toute la largeur (texte/logo perdus
+      // dans le vide sur un moniteur large).
+      @include respond-from(xl) {
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      // Sur mobile, deux panels côte à côte + un terminal fixe ne tiennent pas
+      // dans 100vh : on repasse en flux normal, empilé, avec scroll de page.
+      @include respond-to(sm) {
+        display: flex;
+        flex-direction: column;
+
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+
+        // Même remarque que .gRow plus bas : #__nuxt empilé (main + aside)
+        // a lui aussi besoin d'un espace dédié entre ses deux lignes.
+        gap: spacing.$s5;
+      }
     }
   }
 
@@ -79,8 +103,22 @@
     min-height: 0;
     min-width: 100%;
 
+    @include respond-to(sm) {
+      flex-direction: column;
+      // Espace dédié entre panels empilés : la seule marge des panels
+      // (2px) ne suffit pas à séparer leurs coins arrondis, qui se
+      // chevauchent visuellement à chaque jonction.
+      gap: spacing.$s5;
+    }
+
     &--aside {
       height: 26vh;
+
+      @include respond-to(sm) {
+        height: auto;
+        min-height: 220px;
+        max-height: 45vh;
+      }
     }
   }
 

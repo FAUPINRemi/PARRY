@@ -69,7 +69,7 @@ async function onMicToggle(e: Event) {
 			<li v-for="p in players" :key="p.id">
 				<Icon name="pixelarticons:user" />
 				 {{ p.nickname }}
-				<span v-if="p.id === myUserId" class="tag-me">(moi)</span>
+				<span v-if="p.id === myUserId" class="hub-tag-me">(moi)</span>
 			</li>
 			<li v-for="s in spectators" :key="s.id">
 				<Icon name="pixelarticons:eye" />

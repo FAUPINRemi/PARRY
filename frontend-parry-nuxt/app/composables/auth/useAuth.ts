@@ -11,6 +11,7 @@ export function useAuth() {
 	const loading = useState<boolean>('auth:loading', () => false)
 	const error = useState<string | null>('auth:error', () => null)
 	const success = useState<boolean>('auth:success', () => false)
+	const guestMode = useState<boolean>('auth:guestMode', () => false)
 
 	const isLoggedIn = computed(() => !!connectedPseudo.value)
 
@@ -20,6 +21,13 @@ export function useAuth() {
 		if (pseudo) connectedPseudo.value = pseudo
 		const avatarDataUrl = localStorage.getItem('userAvatarDataUrl')
 		if (avatarDataUrl) connectedAvatarDataUrl.value = avatarDataUrl
+		guestMode.value = localStorage.getItem('parry:guestMode') === '1'
+	}
+
+	/** L'utilisateur a explicitement choisi de jouer sans créer de compte. */
+	function continueAsGuest() {
+		guestMode.value = true
+		if (process.client) localStorage.setItem('parry:guestMode', '1')
 	}
 
 	async function login(params: { username: string; password: string }) {
@@ -159,7 +167,9 @@ export function useAuth() {
 		connectedPseudo,
 		connectedAvatarDataUrl,
 		isLoggedIn,
+		guestMode,
 		initFromStorage,
+		continueAsGuest,
 		forceLogout,
 		login,
 		register,
